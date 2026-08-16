@@ -746,10 +746,13 @@ For billing support: ${config.supportEmail}
               </button>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  router.push('/ipos');
+                }}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 border border-slate-700 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700 transition"
               >
-                <span>Close (Continue Free)</span>
+                <span>Continue Free Version →</span>
               </button>
             </div>
           </div>
@@ -762,7 +765,7 @@ For billing support: ${config.supportEmail}
               <CheckCircle2 size={30} />
             </div>
             <div>
-              <h3 className="font-heading text-xl font-black text-white">Free Pass Activated!</h3>
+              <h3 className="font-heading text-xl font-black text-white">Premium Unlocked!</h3>
               <p className="mt-0.5 text-xs text-slate-300">
                 Welcome to <strong className="text-cyan-400">Investor Intelligence {invoiceData.plan}</strong>.
               </p>
@@ -785,7 +788,7 @@ For billing support: ${config.supportEmail}
               )}
               <div className="flex justify-between">
                 <span className="text-slate-400">Amount Paid:</span>
-                <span className="font-bold text-white">₹0 (Free promotional activation)</span>
+                <span className="font-bold text-white">₹{invoiceData.amount}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Account Status:</span>
@@ -804,10 +807,13 @@ For billing support: ${config.supportEmail}
               </button>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  router.push('/dashboard');
+                }}
                 className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 py-2 text-xs font-black text-slate-950 shadow-md transition hover:scale-105"
               >
-                Start Exploring →
+                Start Exploring Premium →
               </button>
             </div>
           </div>
