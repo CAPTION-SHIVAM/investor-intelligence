@@ -40,126 +40,43 @@ export function computeExpiryDate(cycle: 'monthly' | 'annual' = 'monthly'): stri
   return expiry.toISOString();
 }
 
-// Pre-seeded registered users with active vs expired subscription timestamps
+// Pre-seeded registered users (Admin accounts only)
 const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
   {
-    firstName: 'Rohan',
-    lastName: 'Sharma',
-    email: 'rohan.sharma@example.com',
-    password: 'password123',
-    initials: 'RS',
-    displayName: 'Rohan Sharma',
-    role: 'USER',
-    plan: 'PRO',
-    joinedDate: '2026-08-10',
-    lastLogin: 'Today, 04:30 PM',
-    utrRef: '423819283921',
-    billingCycle: 'monthly',
-    subscriptionStartDate: '2026-08-10T10:00:00.000Z',
-    subscriptionExpiresAt: '2026-09-09T10:00:00.000Z', // 24 days remaining
-    isExpired: false,
-    paymentStatus: 'VERIFIED',
-  },
-  {
-    firstName: 'Ananya',
-    lastName: 'Deshmukh',
-    email: 'ananya.deshmukh@gmail.com',
-    password: 'password123',
-    initials: 'AD',
-    displayName: 'Ananya Deshmukh',
-    role: 'USER',
-    plan: 'PRO',
-    joinedDate: '2026-08-12',
-    lastLogin: 'Today, 02:15 PM',
-    utrRef: '423984920194',
-    billingCycle: 'monthly',
-    subscriptionStartDate: '2026-08-12T14:30:00.000Z',
-    subscriptionExpiresAt: '2026-09-11T14:30:00.000Z', // 26 days remaining
-    isExpired: false,
-    paymentStatus: 'VERIFIED',
-  },
-  {
-    firstName: 'Arjun',
-    lastName: 'Mehta',
-    email: 'arjun.mehta@startup.io',
-    password: 'password123',
-    initials: 'AM',
-    displayName: 'Arjun Mehta',
-    role: 'USER',
-    plan: 'FREE',
-    joinedDate: '2026-08-16',
-    lastLogin: 'Today, 06:15 PM',
-    utrRef: '423819208311',
-    paymentStatus: 'PENDING',
-    pendingPlan: 'PRO',
-    pendingBillingCycle: 'monthly',
-    pendingAmount: 299,
-    paymentSubmittedAt: '2026-08-16T15:30:00.000Z',
-    isExpired: false,
-  },
-  {
-    firstName: 'Vikram',
-    lastName: 'Singhania',
-    email: 'vikram.singhania@apexcapital.in',
-    password: 'password123',
-    initials: 'VS',
-    displayName: 'Vikram Singhania',
-    role: 'USER',
+    firstName: 'Shivam',
+    lastName: 'Vishwakarma',
+    email: 'admin@investoriq.in',
+    password: 'admin123',
+    initials: 'SV',
+    displayName: 'Shivam Vishwakarma (Master Admin)',
+    role: 'ADMIN',
     plan: 'INSTITUTIONAL',
     joinedDate: '2026-08-01',
-    lastLogin: 'Today, 11:45 AM',
-    utrRef: '423190284729',
+    lastLogin: 'Today',
+    utrRef: 'UPI/ROOT/ADMIN999',
     billingCycle: 'annual',
-    subscriptionStartDate: '2026-08-01T09:00:00.000Z',
-    subscriptionExpiresAt: '2027-08-01T09:00:00.000Z', // 1 year
+    subscriptionStartDate: '2026-08-01T00:00:00.000Z',
+    subscriptionExpiresAt: '2099-12-31T23:59:59.000Z',
     isExpired: false,
     paymentStatus: 'VERIFIED',
   },
   {
-    firstName: 'Karan',
-    lastName: 'Kapoor',
-    email: 'karan.kapoor@techcorp.in',
+    firstName: 'Shivam',
+    lastName: 'Vishwakarma',
+    email: 'investor.shivam5049@gmail.com',
     password: 'password123',
-    initials: 'KK',
-    displayName: 'Karan Kapoor',
-    role: 'USER',
-    plan: 'FREE',
-    joinedDate: '2026-07-01',
-    lastLogin: 'Yesterday',
-    utrRef: '423719382019',
+    initials: 'SV',
+    displayName: 'Shivam Vishwakarma',
+    role: 'ADMIN',
+    plan: 'PRO',
+    joinedDate: '2026-08-10',
+    lastLogin: 'Today',
+    utrRef: 'UPI/423188902144',
     billingCycle: 'monthly',
-    subscriptionStartDate: '2026-07-01T10:00:00.000Z',
-    subscriptionExpiresAt: '2026-07-31T10:00:00.000Z',
-    isExpired: true,
-    paymentStatus: 'NONE',
-  },
-  {
-    firstName: 'Pooja',
-    lastName: 'Patel',
-    email: 'pooja.patel@outlook.com',
-    password: 'password123',
-    initials: 'PP',
-    displayName: 'Pooja Patel',
-    role: 'USER',
-    plan: 'FREE',
-    joinedDate: '2026-08-14',
-    lastLogin: 'Yesterday',
+    subscriptionStartDate: '2026-08-10T10:00:00.000Z',
+    subscriptionExpiresAt: '2026-09-09T10:00:00.000Z',
     isExpired: false,
-    paymentStatus: 'NONE',
-  },
-  {
-    firstName: 'Sneha',
-    lastName: 'Reddy',
-    email: 'sneha.reddy@investments.org',
-    password: 'password123',
-    initials: 'SR',
-    displayName: 'Sneha Reddy',
-    role: 'USER',
-    plan: 'FREE',
-    joinedDate: '2026-08-16',
-    lastLogin: 'Today, 05:10 PM',
-    isExpired: false,
-    paymentStatus: 'NONE',
+    paymentStatus: 'VERIFIED',
   },
 ];
 
@@ -404,7 +321,34 @@ function getRegisteredUsersRaw(): InvestorUser[] {
       window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(DEFAULT_REGISTERED_USERS));
       return DEFAULT_REGISTERED_USERS;
     }
-    return JSON.parse(item) as InvestorUser[];
+    const parsed = JSON.parse(item) as InvestorUser[];
+    // Purge old mock dummy user accounts
+    const oldDummyEmails = [
+      'rohan.sharma@example.com',
+      'ananya.deshmukh@gmail.com',
+      'arjun.mehta@startup.io',
+      'vikram.singhania@apexcapital.in',
+      'karan.kapoor@techcorp.in',
+      'pooja.patel@outlook.com',
+      'sneha.reddy@investments.org',
+      'rajesh.verma@quantfund.in',
+      'priya.sharma@investor.in',
+      'test@gmail.com',
+    ];
+    const cleaned = parsed.filter((u) => !oldDummyEmails.includes(u.email.toLowerCase()));
+
+    // Ensure Master Admin is present
+    const hasMasterAdmin = cleaned.some(
+      (u) =>
+        u.email.toLowerCase() === 'admin@investoriq.in' ||
+        u.email.toLowerCase() === 'admin@investorintelligence.com'
+    );
+    if (!hasMasterAdmin) {
+      cleaned.unshift(DEFAULT_REGISTERED_USERS[0]);
+    }
+
+    window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(cleaned));
+    return cleaned;
   } catch {
     return DEFAULT_REGISTERED_USERS;
   }

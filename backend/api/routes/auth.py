@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 USERS_FILE = DATA_DIR / "users.json"
 
-# Pre-seeded accounts
+# Pre-seeded accounts (Admin only)
 DEFAULT_USERS: List[Dict[str, Any]] = [
     {
         "id": "usr_admin",
@@ -47,58 +47,6 @@ DEFAULT_USERS: List[Dict[str, Any]] = [
         "subscriptionExpiresAt": "2026-09-09T10:00:00.000Z",
         "isExpired": False,
         "paymentStatus": "VERIFIED",
-    },
-    {
-        "id": "usr_arjun",
-        "email": "arjun.mehta@startup.io",
-        "password": "password123",
-        "displayName": "Arjun Mehta",
-        "initials": "AM",
-        "role": "USER",
-        "plan": "FREE",
-        "joinedDate": "2026-08-16",
-        "lastLogin": "2026-08-16",
-        "utrRef": "423819208311",
-        "paymentStatus": "PENDING",
-        "pendingPlan": "PRO",
-        "pendingBillingCycle": "monthly",
-        "pendingAmount": 299,
-        "paymentSubmittedAt": "2026-08-16T15:30:00.000Z",
-        "subscriptionStartDate": None,
-        "subscriptionExpiresAt": None,
-        "isExpired": False,
-    },
-    {
-        "id": "usr_rajesh",
-        "email": "rajesh.verma@quantfund.in",
-        "password": "password123",
-        "displayName": "Rajesh Verma",
-        "initials": "RV",
-        "role": "USER",
-        "plan": "PRO",
-        "joinedDate": "2026-08-12",
-        "lastLogin": "2026-08-16",
-        "utrRef": "UPI/423190823411",
-        "subscriptionStartDate": "2026-08-12T10:00:00.000Z",
-        "subscriptionExpiresAt": "2026-09-11T10:00:00.000Z",
-        "isExpired": False,
-        "paymentStatus": "VERIFIED",
-    },
-    {
-        "id": "usr_priya",
-        "email": "priya.sharma@investor.in",
-        "password": "password123",
-        "displayName": "Priya Sharma",
-        "initials": "PS",
-        "role": "USER",
-        "plan": "FREE",
-        "joinedDate": "2026-08-15",
-        "lastLogin": "2026-08-16",
-        "utrRef": "",
-        "subscriptionStartDate": None,
-        "subscriptionExpiresAt": None,
-        "isExpired": False,
-        "paymentStatus": "NONE",
     },
 ]
 
