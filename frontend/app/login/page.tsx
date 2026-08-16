@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 import { Sparkles, ShieldCheck, ArrowRight, Lock, Mail, CheckCircle2, Crown, Zap, UserCheck, AlertCircle, Info, Search } from 'lucide-react';
-import { getStoredUser, authenticateUser, type InvestorUser } from '../../lib/user-profile';
+import { getStoredUser, authenticateUserAsync, type InvestorUser } from '../../lib/user-profile';
 import { BrandLogo } from '../components/brand-logo';
 
 function LoginContent() {
@@ -17,6 +17,7 @@ function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [detectedUser, setDetectedUser] = useState<InvestorUser | null>(null);
 
   useEffect(() => {
@@ -26,26 +27,33 @@ function LoginContent() {
     }
   }, []);
 
-  const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    const res = authenticateUser(email, password);
-    if (!res.success) {
-      setError(res.error || 'Invalid credentials. Please verify your email and password.');
-      return;
-    }
+    try {
+      const res = await authenticateUserAsync(email, password);
+      if (!res.success) {
+        setError(res.error || 'Invalid credentials. Please verify your email and password.');
+        setLoading(false);
+        return;
+      }
 
-    if (res.user?.role === 'ADMIN') {
-      router.push('/admin');
-    } else if (isSearchRedirect && searchQuery) {
-      router.push(`/ipos?q=${encodeURIComponent(searchQuery)}`);
-    } else if (isSearchRedirect) {
-      router.push('/ipos');
-    } else if (isUpgradeRedirect) {
-      router.push('/dashboard?upgrade=true');
-    } else {
-      router.push('/dashboard');
+      if (res.user?.role === 'ADMIN') {
+        router.push('/admin');
+      } else if (isSearchRedirect && searchQuery) {
+        router.push(`/ipos?q=${encodeURIComponent(searchQuery)}`);
+      } else if (isSearchRedirect) {
+        router.push('/ipos');
+      } else if (isUpgradeRedirect) {
+        router.push('/dashboard?upgrade=true');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch {
+      setError('Connection issue. Please check your network and try again.');
+      setLoading(false);
     }
   };
 
@@ -145,16 +153,26 @@ function LoginContent() {
 
         <button
           type="submit"
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 py-3 font-extrabold text-slate-950 shadow-lg shadow-cyan-500/25 transition hover:scale-[1.02]"
+          disabled={loading}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 py-3 font-extrabold text-slate-950 shadow-lg shadow-cyan-500/25 transition hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <span>
-            {isSearchRedirect
-              ? 'Sign In & View Analysis'
-              : isUpgradeRedirect
-              ? 'Sign In & Continue to Payment'
-              : 'Sign In'}
-          </span>
-          <ArrowRight size={16} />
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+              <span>Verifying credentials...</span>
+            </span>
+          ) : (
+            <>
+              <span>
+                {isSearchRedirect
+                  ? 'Sign In & View Analysis'
+                  : isUpgradeRedirect
+                  ? 'Sign In & Continue to Payment'
+                  : 'Sign In'}
+              </span>
+              <ArrowRight size={16} />
+            </>
+          )}
         </button>
       </form>
 

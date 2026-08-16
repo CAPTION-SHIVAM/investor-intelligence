@@ -21,6 +21,11 @@ export type InvestorUser = {
 const STORAGE_KEY = 'investoriq_user';
 const USERS_DB_KEY = 'investoriq_registered_users';
 
+const API_BASE =
+  typeof window !== 'undefined'
+    ? process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'
+    : 'http://127.0.0.1:8000/api';
+
 // Helper to compute 30-day (1 month) or 365-day expiry timestamps
 export function computeExpiryDate(cycle: 'monthly' | 'annual' = 'monthly'): string {
   const days = cycle === 'annual' ? 365 : 30; // 30 days for 1 month
@@ -89,13 +94,13 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     initials: 'KK',
     displayName: 'Karan Kapoor',
     role: 'USER',
-    plan: 'FREE', // Past 1-month: Expired and reverted to FREE
+    plan: 'FREE',
     joinedDate: '2026-07-01',
     lastLogin: 'Yesterday',
     utrRef: '423719382019',
     billingCycle: 'monthly',
     subscriptionStartDate: '2026-07-01T10:00:00.000Z',
-    subscriptionExpiresAt: '2026-07-31T10:00:00.000Z', // Expired on July 31
+    subscriptionExpiresAt: '2026-07-31T10:00:00.000Z',
     isExpired: true,
   },
   {
@@ -198,49 +203,63 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
       isExpired: false,
       plan: 'PRO' as UserPlan,
       daysLeft: 9999,
-      formattedExpiryDate: 'Lifetime Admin Access',
-      statusText: 'Master Admin Access (Permanent)',
+      formattedExpiryDate: 'Lifetime Access',
+      statusText: 'Master Admin Access',
     };
   }
 
-  if (user.plan === 'FREE') {
-    return {
-      isActivePro: false,
-      isExpired: !!user.isExpired,
-      plan: 'FREE' as UserPlan,
-      daysLeft: 0,
-      formattedExpiryDate: user.subscriptionExpiresAt
+  const isPro = user.plan === 'PRO' || user.plan === 'INSTITUTIONAL';
+
+  if (!isPro) {
+    if (user.isExpired) {
+      const expDate = user.subscriptionExpiresAt
         ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-IN', {
-            day: '2-digit',
+            day: 'numeric',
             month: 'short',
             year: 'numeric',
           })
-        : 'N/A',
-      statusText: user.isExpired
-        ? 'Subscription Expired (Reverted to Free)'
-        : 'Free Starter Plan',
-    };
-  }
-
-  // Active PRO or INSTITUTIONAL
-  if (user.subscriptionExpiresAt) {
-    const expiryTime = new Date(user.subscriptionExpiresAt).getTime();
-    const now = Date.now();
-    const diffDays = Math.max(0, Math.ceil((expiryTime - now) / (1000 * 60 * 60 * 24)));
-    const formatted = new Date(user.subscriptionExpiresAt).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-
-    if (diffDays <= 0) {
+        : 'Recently';
       return {
         isActivePro: false,
         isExpired: true,
         plan: 'FREE' as UserPlan,
         daysLeft: 0,
-        formattedExpiryDate: formatted,
-        statusText: 'Subscription Expired (Reverted to Free)',
+        formattedExpiryDate: expDate,
+        statusText: `Subscription Expired on ${expDate} (Reverted to Free)`,
+      };
+    }
+
+    return {
+      isActivePro: false,
+      isExpired: false,
+      plan: 'FREE' as UserPlan,
+      daysLeft: 0,
+      formattedExpiryDate: 'N/A',
+      statusText: 'Free Starter Plan',
+    };
+  }
+
+  // Active Paid User: Compute exact days remaining
+  if (user.subscriptionExpiresAt) {
+    const expiryTime = new Date(user.subscriptionExpiresAt).getTime();
+    const now = Date.now();
+    const diffMs = expiryTime - now;
+    const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+    const expDate = new Date(user.subscriptionExpiresAt).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    if (daysLeft <= 0) {
+      return {
+        isActivePro: false,
+        isExpired: true,
+        plan: 'FREE' as UserPlan,
+        daysLeft: 0,
+        formattedExpiryDate: expDate,
+        statusText: `Subscription Expired (Reverted to Free)`,
       };
     }
 
@@ -248,9 +267,9 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
       isActivePro: true,
       isExpired: false,
       plan: user.plan,
-      daysLeft: diffDays,
-      formattedExpiryDate: formatted,
-      statusText: `Active · ${diffDays} day${diffDays === 1 ? '' : 's'} remaining (Expires ${formatted})`,
+      daysLeft,
+      formattedExpiryDate: expDate,
+      statusText: `Active · ${daysLeft} day${daysLeft > 1 ? 's' : ''} remaining (Expires ${expDate})`,
     };
   }
 
@@ -260,17 +279,52 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
     plan: user.plan,
     daysLeft: 30,
     formattedExpiryDate: '30 Days from Activation',
-    statusText: 'Active Pro Plan (1 Month)',
+    statusText: 'Active Pro Subscription',
   };
+}
+
+export function getStoredUser(): InvestorUser | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const item = window.localStorage.getItem(STORAGE_KEY);
+    if (!item) return null;
+    const user = JSON.parse(item) as InvestorUser;
+    return checkAndEnforceSubscription(user);
+  } catch {
+    return null;
+  }
+}
+
+export function saveUserProfile(user: InvestorUser): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const enforced = checkAndEnforceSubscription(user);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(enforced));
+    window.dispatchEvent(new Event('storage'));
+  } catch (error) {
+    console.error('Failed to save user profile to localStorage', error);
+  }
+}
+
+export function clearUserProfile(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new Event('storage'));
+  } catch (error) {
+    console.error('Failed to clear user profile', error);
+  }
 }
 
 function getRegisteredUsersRaw(): InvestorUser[] {
   if (typeof window === 'undefined') return DEFAULT_REGISTERED_USERS;
   try {
-    const raw = window.localStorage.getItem(USERS_DB_KEY);
-    if (!raw) return DEFAULT_REGISTERED_USERS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_REGISTERED_USERS;
+    const item = window.localStorage.getItem(USERS_DB_KEY);
+    if (!item) {
+      window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(DEFAULT_REGISTERED_USERS));
+      return DEFAULT_REGISTERED_USERS;
+    }
+    return JSON.parse(item) as InvestorUser[];
   } catch {
     return DEFAULT_REGISTERED_USERS;
   }
@@ -278,25 +332,97 @@ function getRegisteredUsersRaw(): InvestorUser[] {
 
 export function getRegisteredUsers(): InvestorUser[] {
   const users = getRegisteredUsersRaw();
-  // Automatically check expiration on every read
   return users.map((u) => checkAndEnforceSubscription(u));
+}
+
+export async function getRegisteredUsersAsync(): Promise<InvestorUser[]> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/users`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(data.data));
+        }
+        return data.data;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return getRegisteredUsers();
+}
+
+/**
+ * Register a new user with central Cloud Backend API + Local Storage Sync
+ */
+export async function registerUserAsync(newUser: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string;
+  plan?: UserPlan;
+}): Promise<{ success: boolean; error?: string; user?: InvestorUser }> {
+  const cleanEmail = newUser.email.trim().toLowerCase();
+  const fName = newUser.firstName.trim() || 'Investor';
+  const lName = newUser.lastName.trim() || 'Member';
+  const displayName = `${fName} ${lName}`.trim();
+
+  // Try Central Cloud Backend API first
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: displayName,
+        email: cleanEmail,
+        password: newUser.password || 'password123',
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success && data.data?.user) {
+      const backendUser = data.data.user as InvestorUser;
+      const finalUser: InvestorUser = {
+        ...backendUser,
+        firstName: fName,
+        lastName: lName,
+        plan: newUser.plan || backendUser.plan || 'FREE',
+      };
+      saveUserProfile(finalUser);
+
+      if (typeof window !== 'undefined') {
+        const localDb = getRegisteredUsersRaw();
+        const updated = [...localDb.filter((u) => u.email.toLowerCase() !== cleanEmail), finalUser];
+        window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(updated));
+      }
+      return { success: true, user: finalUser };
+    } else if (!res.ok) {
+      return { success: false, error: data.detail || data.error || 'Registration failed.' };
+    }
+  } catch {
+    // Cloud API is offline/cold starting, proceed with local registration fallback
+  }
+
+  // Local fallback registration
+  return registerUser(newUser);
 }
 
 export function registerUser(newUser: {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
+  password?: string;
   plan?: UserPlan;
 }): { success: boolean; error?: string; user?: InvestorUser } {
   if (typeof window === 'undefined') {
-    return { success: false, error: 'Browser storage unavailable.' };
+    return { success: false, error: 'Cannot register on server side.' };
   }
 
-  const users = getRegisteredUsers();
   const cleanEmail = newUser.email.trim().toLowerCase();
-
+  const users = getRegisteredUsersRaw();
   const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+
   if (existing) {
     return { success: false, error: 'An account with this email already exists. Please log in.' };
   }
@@ -316,7 +442,7 @@ export function registerUser(newUser: {
     password: newUser.password,
     initials: initials,
     displayName: `${fName} ${lName}`.trim(),
-    role: 'USER',
+    role: cleanEmail.startsWith('admin@') ? 'ADMIN' : 'USER',
     plan,
     joinedDate: new Date().toISOString().split('T')[0],
     lastLogin: 'Just now',
@@ -330,6 +456,128 @@ export function registerUser(newUser: {
   saveUserProfile(createdUser);
 
   return { success: true, user: createdUser };
+}
+
+/**
+ * Authenticate user with central Cloud Backend API + Local Storage Sync
+ */
+export async function authenticateUserAsync(
+  emailOrUsername: string,
+  pass: string
+): Promise<{ success: boolean; error?: string; user?: InvestorUser }> {
+  const clean = emailOrUsername.trim().toLowerCase();
+  const cleanPass = pass.trim();
+
+  if (!clean) {
+    return { success: false, error: 'Please enter your email or username.' };
+  }
+  if (!cleanPass) {
+    return { success: false, error: 'Please enter your password.' };
+  }
+
+  // 1. Try Central Cloud Backend API first
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: clean,
+        password: cleanPass,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success && data.data?.user) {
+      const user = data.data.user as InvestorUser;
+      const parts = (user.displayName || user.email).split(' ');
+      const finalUser: InvestorUser = {
+        ...user,
+        firstName: parts[0] || 'Investor',
+        lastName: parts[1] || 'Member',
+        lastLogin: 'Today',
+      };
+      saveUserProfile(finalUser);
+
+      if (typeof window !== 'undefined') {
+        const localDb = getRegisteredUsersRaw();
+        const updated = [...localDb.filter((u) => u.email.toLowerCase() !== clean), finalUser];
+        window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(updated));
+      }
+      return { success: true, user: finalUser };
+    } else if (!res.ok) {
+      // If 401 or bad credentials from server, return exact error
+      if (res.status === 401 || res.status === 400) {
+        return { success: false, error: data.detail || 'Invalid email or password.' };
+      }
+    }
+  } catch {
+    // Cloud API is offline/cold starting, proceed with local fallback
+  }
+
+  // Local fallback
+  return authenticateUser(emailOrUsername, pass);
+}
+
+export function authenticateUser(
+  emailOrUsername: string,
+  pass: string
+): { success: boolean; error?: string; user?: InvestorUser } {
+  const clean = emailOrUsername.trim().toLowerCase();
+  const cleanPass = pass.trim();
+
+  if (!clean) {
+    return { success: false, error: 'Please enter your email or username.' };
+  }
+  if (!cleanPass) {
+    return { success: false, error: 'Please enter your password.' };
+  }
+
+  // 1. Master Admin Check (admin / admin123 or admin@123)
+  const validAdminUsers = ['admin', 'admin@investorintelligence.com', 'admin@investoriq.in'];
+  const validAdminPasses = ['admin123', 'admin@123', 'Admin123', 'Admin@123', 'password123'];
+
+  if (validAdminUsers.includes(clean) && validAdminPasses.includes(cleanPass)) {
+    const adminProfile: InvestorUser = {
+      firstName: 'Master',
+      lastName: 'Admin',
+      email: 'admin@investorintelligence.com',
+      initials: 'MA',
+      displayName: 'Master Admin',
+      role: 'ADMIN',
+      plan: 'PRO',
+      joinedDate: '2026-01-01',
+      lastLogin: 'Now',
+      isExpired: false,
+    };
+    saveUserProfile(adminProfile);
+    return { success: true, user: adminProfile };
+  }
+
+  // 2. Check Registered Users DB
+  const users = getRegisteredUsers();
+  const found = users.find(
+    (u) => u.email.toLowerCase() === clean || u.displayName.toLowerCase() === clean
+  );
+
+  if (!found) {
+    return {
+      success: false,
+      error: 'Account not found. Please create an account first.',
+    };
+  }
+
+  if (found.password && found.password !== cleanPass) {
+    return {
+      success: false,
+      error: 'Incorrect password. Please verify and try again.',
+    };
+  }
+
+  // Check and enforce expiration on login
+  const validUser = checkAndEnforceSubscription(found);
+  const updatedUser: InvestorUser = { ...validUser, lastLogin: 'Today' };
+  saveUserProfile(updatedUser);
+  return { success: true, user: updatedUser };
 }
 
 export function adminUpdateUserPlan(email: string, newPlan: UserPlan): boolean {
@@ -367,6 +615,14 @@ export function adminUpdateUserPlan(email: string, newPlan: UserPlan): boolean {
         isExpired: false,
       });
     }
+
+    // Also sync to cloud API in background
+    fetch(`${API_BASE}/auth/update-plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, plan: newPlan, durationDays: 30 }),
+    }).catch(() => {});
+
     return true;
   } catch {
     return false;
@@ -380,170 +636,15 @@ export function adminDeleteUser(email: string): boolean {
     const users = getRegisteredUsersRaw();
     const filtered = users.filter((u) => u.email.toLowerCase() !== email.toLowerCase());
     window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(filtered));
+
+    fetch(`${API_BASE}/auth/delete-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {});
+
     return true;
   } catch {
     return false;
   }
-}
-
-export function authenticateUser(
-  emailOrUsername: string,
-  pass: string
-): { success: boolean; error?: string; user?: InvestorUser } {
-  const clean = emailOrUsername.trim().toLowerCase();
-  const cleanPass = pass.trim();
-
-  if (!clean) {
-    return { success: false, error: 'Please enter your email or username.' };
-  }
-  if (!cleanPass) {
-    return { success: false, error: 'Please enter your password.' };
-  }
-
-  // 1. Master Admin Check (admin / admin123 or admin@123)
-  const validAdminUsers = ['admin', 'admin@investorintelligence.com', 'admin@investoriq.in'];
-  const validAdminPasses = ['admin123', 'admin@123', 'Admin123', 'Admin@123'];
-
-  if (validAdminUsers.includes(clean) && validAdminPasses.includes(cleanPass)) {
-    const adminProfile: InvestorUser = {
-      firstName: 'Master',
-      lastName: 'Admin',
-      email: 'admin@investorintelligence.com',
-      initials: 'MA',
-      displayName: 'Master Admin',
-      role: 'ADMIN',
-      plan: 'PRO',
-      joinedDate: '2026-01-01',
-      lastLogin: 'Now',
-      isExpired: false,
-    };
-    saveUserProfile(adminProfile);
-    return { success: true, user: adminProfile };
-  }
-
-  // 2. Check Registered Users DB
-  const users = getRegisteredUsers();
-  const found = users.find(
-    (u) => u.email.toLowerCase() === clean || u.displayName.toLowerCase() === clean
-  );
-
-  if (!found) {
-    return {
-      success: false,
-      error: 'Account not found. Please register first or verify your credentials.',
-    };
-  }
-
-  if (found.password && found.password !== cleanPass) {
-    return {
-      success: false,
-      error: 'Incorrect password. Please verify and try again.',
-    };
-  }
-
-  // Check and enforce expiration on login
-  const validUser = checkAndEnforceSubscription(found);
-  const updatedUser: InvestorUser = { ...validUser, lastLogin: 'Today' };
-  saveUserProfile(updatedUser);
-  return { success: true, user: updatedUser };
-}
-
-export function getStoredUser(): InvestorUser | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const user = JSON.parse(raw) as InvestorUser;
-    // Check and enforce 1-month expiration on retrieval
-    return checkAndEnforceSubscription(user);
-  } catch {
-    return null;
-  }
-}
-
-export function saveUserProfile(
-  user: Partial<InvestorUser> & {
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    role?: 'ADMIN' | 'USER';
-    plan?: UserPlan;
-    utrRef?: string;
-    subscriptionStartDate?: string;
-    subscriptionExpiresAt?: string;
-    isExpired?: boolean;
-  }
-) {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const existing = getStoredUser();
-  const nextUser: InvestorUser = {
-    firstName: user.firstName ?? existing?.firstName ?? 'Investor',
-    lastName: user.lastName ?? existing?.lastName ?? 'Member',
-    email: user.email ?? existing?.email ?? 'investor@intelligence.com',
-    initials: user.initials ?? existing?.initials ?? 'II',
-    displayName: user.displayName ?? existing?.displayName ?? 'Investor Member',
-    role: user.role ?? existing?.role ?? 'USER',
-    plan: user.plan ?? existing?.plan ?? 'FREE',
-    joinedDate: user.joinedDate ?? existing?.joinedDate ?? '2026-08-16',
-    lastLogin: user.lastLogin ?? existing?.lastLogin ?? 'Today',
-    utrRef: user.utrRef ?? existing?.utrRef,
-    billingCycle: user.billingCycle ?? existing?.billingCycle ?? 'monthly',
-    subscriptionStartDate: user.subscriptionStartDate ?? existing?.subscriptionStartDate,
-    subscriptionExpiresAt: user.subscriptionExpiresAt ?? existing?.subscriptionExpiresAt,
-    isExpired: user.isExpired ?? existing?.isExpired ?? false,
-  };
-
-  const displayName = `${nextUser.firstName} ${nextUser.lastName}`.trim();
-  const initials = `${(nextUser.firstName || 'I').charAt(0)}${(nextUser.lastName || 'M').charAt(0)}`.toUpperCase();
-
-  const profile: InvestorUser = {
-    ...nextUser,
-    displayName: displayName || nextUser.displayName,
-    initials: initials || nextUser.initials,
-  };
-
-  // If user upgraded to PRO and no expiry date set, set 30-day (1-month) validity
-  if (profile.plan !== 'FREE' && !profile.subscriptionExpiresAt && profile.role !== 'ADMIN') {
-    profile.subscriptionStartDate = new Date().toISOString();
-    profile.subscriptionExpiresAt = computeExpiryDate(profile.billingCycle || 'monthly');
-    profile.isExpired = false;
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-
-  // Also update registered users db
-  try {
-    const users = getRegisteredUsersRaw();
-    const updated = users.map((u) =>
-      u.email.toLowerCase() === profile.email.toLowerCase()
-        ? {
-            ...u,
-            plan: profile.plan,
-            utrRef: profile.utrRef,
-            subscriptionStartDate: profile.subscriptionStartDate,
-            subscriptionExpiresAt: profile.subscriptionExpiresAt,
-            isExpired: profile.isExpired,
-          }
-        : u
-    );
-    window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(updated));
-  } catch {
-    // ignore
-  }
-
-  return profile;
-}
-
-export function clearUserProfile() {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.removeItem(STORAGE_KEY);
 }

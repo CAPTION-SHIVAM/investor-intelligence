@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles, ShieldCheck, ArrowRight, CheckCircle2, Crown, Zap, AlertCircle, Search } from 'lucide-react';
-import { registerUser, type UserPlan } from '../../lib/user-profile';
+import { registerUserAsync, type UserPlan } from '../../lib/user-profile';
 import { BrandLogo } from '../components/brand-logo';
 
 function RegisterContent() {
@@ -21,8 +21,9 @@ function RegisterContent() {
   const [selectedPlan, setSelectedPlan] = useState<UserPlan>(isUpgradeRedirect ? 'PRO' : 'FREE');
   const [investorType, setInvestorType] = useState('Growth & IPO Investor');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -39,27 +40,35 @@ function RegisterContent() {
       return;
     }
 
-    const res = registerUser({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      password: password.trim(),
-      plan: selectedPlan,
-    });
+    setLoading(true);
 
-    if (!res.success) {
-      setError(res.error || 'Registration failed. Please try again.');
-      return;
-    }
+    try {
+      const res = await registerUserAsync({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        plan: selectedPlan,
+      });
 
-    if (isSearchRedirect && searchQuery) {
-      router.push(`/ipos?q=${encodeURIComponent(searchQuery)}`);
-    } else if (isSearchRedirect) {
-      router.push('/ipos');
-    } else if (isUpgradeRedirect) {
-      router.push('/dashboard?upgrade=true');
-    } else {
-      router.push('/dashboard');
+      if (!res.success) {
+        setError(res.error || 'Registration failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (isSearchRedirect && searchQuery) {
+        router.push(`/ipos?q=${encodeURIComponent(searchQuery)}`);
+      } else if (isSearchRedirect) {
+        router.push('/ipos');
+      } else if (isUpgradeRedirect) {
+        router.push('/dashboard?upgrade=true');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch {
+      setError('Connection issue. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -203,16 +212,26 @@ function RegisterContent() {
 
         <button
           type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 py-3 font-extrabold text-slate-950 shadow-lg shadow-cyan-500/25 transition hover:scale-[1.02]"
+          disabled={loading}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 py-3 font-extrabold text-slate-950 shadow-lg shadow-cyan-500/25 transition hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <span>
-            {isSearchRedirect
-              ? 'Create Account & View Analysis'
-              : isUpgradeRedirect
-              ? 'Create Account & Continue to Payment'
-              : `Create ${selectedPlan === 'PRO' ? 'Pro' : 'Free'} Workspace`}
-          </span>
-          <ArrowRight size={16} />
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+              <span>Creating your account...</span>
+            </span>
+          ) : (
+            <>
+              <span>
+                {isSearchRedirect
+                  ? 'Create Account & View Analysis'
+                  : isUpgradeRedirect
+                  ? 'Create Account & Continue to Payment'
+                  : `Create ${selectedPlan === 'PRO' ? 'Pro' : 'Free'} Workspace`}
+              </span>
+              <ArrowRight size={16} />
+            </>
+          )}
         </button>
       </form>
 

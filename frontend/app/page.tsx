@@ -38,6 +38,8 @@ import {
   Smile,
   Layers,
   Download,
+  Menu,
+  X,
 } from 'lucide-react';
 import { TradingViewTicker } from './components/tradingview-ticker';
 import { PaymentModal } from './components/payment-modal';
@@ -190,6 +192,7 @@ export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [user, setUser] = useState<InvestorUser | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Hero Quick Search
   const [heroSearch, setHeroSearch] = useState('');
@@ -255,51 +258,146 @@ export default function HomePage() {
       </div>
 
       {/* Navigation Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#030712]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#030712]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3.5 py-3 sm:px-6 lg:px-8">
           <BrandLogo size="md" href="/" />
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-300 md:flex">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-slate-300 md:flex">
             <Link href="/journal" className="transition hover:text-white flex items-center gap-1.5 text-cyan-300 font-bold bg-cyan-950/40 px-2.5 py-1 rounded-xl border border-cyan-500/30">
               <BookOpen size={14} /> Trading Journal <span className="text-[9px] bg-cyan-400 text-slate-950 px-1.5 py-0.2 rounded-full font-black uppercase">NEW</span>
             </Link>
             <a href="#calculator" className="transition hover:text-white flex items-center gap-1.5 text-slate-300 font-semibold">
-              <Calculator size={14} /> Profit Calculator
+              <Calculator size={14} /> Calculator
             </a>
-            <a href="#six-pillars" className="transition hover:text-white">6-Pillar Engine</a>
+            <a href="#six-pillars" className="transition hover:text-white">6-Pillars</a>
             <a href="#ipos" className="transition hover:text-white">Gift Verdicts</a>
             <a href="#pricing" className="transition hover:text-white">Pricing</a>
             <a href="#faq" className="transition hover:text-white">FAQ</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isLoggedIn ? (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-3.5 py-2 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500 hover:text-slate-950"
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500 hover:text-slate-950"
               >
                 <UserCheck size={14} />
-                <span>Dashboard ({user?.displayName})</span>
+                <span className="hidden sm:inline">Dashboard ({user?.displayName})</span>
+                <span className="sm:hidden">App</span>
               </Link>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/login"
-                  className="rounded-xl border border-slate-700/80 bg-slate-900/80 px-4 py-2 text-xs font-bold text-slate-200 transition hover:bg-slate-800 hover:text-white"
-                >
-                  Sign in
-                </Link>
-              </div>
+              <Link
+                href="/login"
+                className="rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold text-slate-200 transition hover:bg-slate-800 hover:text-white"
+              >
+                Sign in
+              </Link>
             )}
 
             <button
               onClick={handleUpgradeClick}
-              className="rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-xs font-extrabold text-slate-950 shadow-lg shadow-cyan-500/25 transition hover:scale-105"
+              className="rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-extrabold text-slate-950 shadow-lg shadow-cyan-500/25 transition hover:scale-105"
             >
               Upgrade Pro
             </button>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              className="rounded-xl border border-slate-800 bg-slate-900 p-1.5 text-slate-300 md:hidden"
+              aria-label="Toggle mobile menu"
+            >
+              {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileNavOpen && (
+          <div className="border-t border-slate-800 bg-[#070d19] px-4 py-4 md:hidden animate-in slide-in-from-top-2">
+            <nav className="space-y-2 text-xs font-bold">
+              <Link
+                href="/journal"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center justify-between rounded-xl bg-cyan-950/40 border border-cyan-500/30 px-3.5 py-2.5 text-cyan-300"
+              >
+                <span className="flex items-center gap-2"><BookOpen size={16} /> Trading &amp; Psychology Journal</span>
+                <span className="text-[9px] bg-cyan-400 text-slate-950 px-1.5 py-0.5 rounded-full font-black">NEW</span>
+              </Link>
+              <Link
+                href="/ipos"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-slate-200"
+              >
+                <TrendingUp size={16} className="text-cyan-400" /> IPO Forensics &amp; Verdicts
+              </Link>
+              <Link
+                href="/screener"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-slate-200"
+              >
+                <SlidersHorizontal size={16} className="text-emerald-400" /> Stock Screener
+              </Link>
+              <a
+                href="#calculator"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-slate-200"
+              >
+                <Calculator size={16} className="text-amber-400" /> IPO Profit Calculator
+              </a>
+              <a
+                href="#six-pillars"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-slate-200"
+              >
+                <Target size={16} className="text-purple-400" /> 6-Pillar Scoring Engine
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-slate-200"
+              >
+                <Crown size={16} className="text-cyan-400" /> Pro Subscription Plans
+              </a>
+              <a
+                href="#faq"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-slate-200"
+              >
+                <HelpCircle size={16} className="text-slate-400" /> Frequently Asked Questions
+              </a>
+
+              <div className="pt-2 border-t border-slate-800 flex gap-2">
+                {isLoggedIn ? (
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="flex-1 rounded-xl border border-slate-700 bg-slate-900 py-2.5 text-center text-xs font-bold text-white"
+                  >
+                    My Profile
+                  </Link>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="flex-1 rounded-xl border border-slate-700 bg-slate-900 py-2.5 text-center text-xs font-bold text-white"
+                  >
+                    Sign In
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    handleUpgradeClick();
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 py-2.5 text-center text-xs font-black text-slate-950"
+                >
+                  Upgrade Pro
+                </button>
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
