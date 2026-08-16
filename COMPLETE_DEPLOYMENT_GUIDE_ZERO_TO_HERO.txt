@@ -1,0 +1,272 @@
+================================================================================
+   INVESTOR INTELLIGENCE & TRADING JOURNAL - COMPLETE DEPLOYMENT GUIDE (ZERO TO HERO)
+================================================================================
+ Platform: IPO Forensics · Reality Scores · Trading Journal · Live UPI Gateway
+ Author: Investor Intelligence Research Desk
+ Target Architecture: Next.js 14 (Frontend) + FastAPI (Backend)
+ Hosting Tier: 100% FREE (Vercel + Render + GitHub)
+ File Type: Plain Text Guide (Openable in Notepad)
+================================================================================
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+1. Prerequisites & Free Accounts Required
+2. STEP 1: Push Your Code to GitHub (Step-by-Step)
+3. STEP 2: Deploy Python Backend on Render.com (100% Free)
+4. STEP 3: Deploy Next.js Frontend on Vercel.com (100% Free)
+5. STEP 4: Test Your Live Production Website (Verification Checklist)
+6. STEP 5: Connect Your Custom Domain (GoDaddy, Namecheap, Hostinger, Cloudflare)
+7. STEP 6: Future Updates & Maintenance (How to Push Changes Live)
+8. STEP 7: Master Admin Credentials & Payment Settings Summary
+================================================================================
+
+
+================================================================================
+1. PREREQUISITES (ALL 100% FREE ACCOUNTS)
+================================================================================
+Before you begin, ensure you have signed up for these 3 free services:
+
+1. GitHub Account: https://github.com/join (Stores your code safely)
+2. Render.com Account: https://render.com (Runs your Python backend for free)
+3. Vercel.com Account: https://vercel.com (Hosts your Next.js website for free)
+
+(Optional): A custom domain from GoDaddy, Namecheap, Hostinger, or BigRock if you
+own one (e.g. yourname.in or investorintelligence.in).
+
+
+================================================================================
+2. STEP 1: PUSH YOUR CODE TO GITHUB (ZERO TO GITHUB)
+================================================================================
+
+1. Open your web browser and go to:
+   https://github.com/new
+
+2. Fill in the repository details:
+   - Repository Name: investor-intelligence
+   - Visibility: Choose Public or Private (Private is recommended to keep source code private)
+   - Do NOT check "Add a README" or ".gitignore" (these are already created in your project)
+   - Click the green "Create repository" button.
+
+3. Copy the repository URL shown on GitHub. It will look like:
+   https://github.com/YOUR_GITHUB_USERNAME/investor-intelligence.git
+
+4. On your computer, open PowerShell or Terminal inside this project directory:
+   (c:\Users\SHIVAM VISHWAKARMA\OneDrive\Desktop\investor-intelligence)
+
+5. Run the following commands one by one:
+
+   git remote add origin https://github.com/YOUR_GITHUB_USERNAME/investor-intelligence.git
+   git branch -M main
+   git push -u origin main
+
+   (Replace YOUR_GITHUB_USERNAME with your actual GitHub username)
+
+6. Refresh your GitHub page. You will now see all your files, code, and folders uploaded!
+
+
+================================================================================
+3. STEP 2: DEPLOY PYTHON BACKEND ON RENDER.COM (100% FREE)
+================================================================================
+
+1. Go to: https://render.com and Log In (Choose "Sign in with GitHub").
+
+2. On your Render Dashboard, click the blue "New +" button in the top right,
+   and select "Web Service".
+
+3. Under "Connect a repository", select your "investor-intelligence" repository.
+   (If not visible, click "Configure GitHub App" to grant access).
+
+4. Fill in the following settings EXACTLY:
+   -----------------------------------------------------------------------------
+   - Name:             investor-intelligence-api
+   - Region:           Singapore (or Frankfurt) -> Fastest response for India
+   - Branch:           main
+   - Root Directory:   (Leave EMPTY)
+   - Runtime:          Python 3
+   - Build Command:    pip install -r backend/requirements.txt
+   - Start Command:    uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+   - Instance Type:    Free ($0 / month)
+   -----------------------------------------------------------------------------
+
+5. Scroll down to the "Environment Variables" section.
+   Click "Add Environment Variable":
+   -----------------------------------------------------------------------------
+   Key:    ALLOW_ALL_ORIGINS
+   Value:  true
+   -----------------------------------------------------------------------------
+
+6. Click the "Create Web Service" button at the bottom.
+
+7. Render will now automatically install Python dependencies and launch the backend.
+   In about 2 to 3 minutes, you will see "Your service is live 🎉".
+
+8. Copy your live Backend URL from the top of the Render page.
+   It will look like:
+   https://investor-intelligence-api.onrender.com
+
+   (Save this URL, you will need it in Step 3!)
+
+
+================================================================================
+4. STEP 3: DEPLOY NEXT.JS FRONTEND ON VERCEL.COM (100% FREE)
+================================================================================
+
+1. Go to: https://vercel.com and Log In (Choose "Continue with GitHub").
+
+2. On your Vercel Dashboard, click "Add New..." -> select "Project".
+
+3. You will see your GitHub repository "investor-intelligence".
+   Click the "Import" button next to it.
+
+4. In the "Configure Project" screen, configure the following:
+   -----------------------------------------------------------------------------
+   - Project Name:     investor-intelligence (or any name you prefer)
+   - Framework Preset: Next.js (detected automatically)
+   - Root Directory:   Click "Edit" -> select "frontend" (VERY IMPORTANT!)
+   -----------------------------------------------------------------------------
+
+5. Expand the "Environment Variables" dropdown and add:
+   -----------------------------------------------------------------------------
+   Name:   NEXT_PUBLIC_API_URL
+   Value:  https://investor-intelligence-api.onrender.com/api
+
+   (Replace with your real Render URL from Step 2, and make sure to append /api at the end!)
+   -----------------------------------------------------------------------------
+
+6. Click the "Deploy" button!
+
+7. Vercel will build the Next.js production bundle, generate pages, and set up
+   automatic SSL encryption. In ~90 seconds, you will see confetti!
+
+8. Your live website URL is ready! Example:
+   https://investor-intelligence.vercel.app
+
+
+================================================================================
+5. STEP 4: LIVE PRODUCTION TESTING CHECKLIST
+================================================================================
+Open your live Vercel URL on any computer, tablet, or smartphone:
+
+1. HOMEPAGE:
+   - Check the live single moving TradingView ticker tape bar at the top.
+   - Verify the dual flagship showcase (1. IPO Forensics & 2. Trading Journal).
+   - Test the IPO Profit Calculator and 6-Pillar scoring cards.
+
+2. AUTHENTICATION & PROFILE:
+   - Click "Sign in" -> Create a new user or sign in with your email.
+   - Visit /profile -> Check your plan badge and 30-day validity tracker.
+
+3. TRADING JOURNAL:
+   - Click "Trading Journal" in the top navigation or sidebar (/journal).
+   - Click "+ Log New Trade" -> Add a trade (e.g. Swiggy, Zomato, Hyundai).
+   - Check automated Win Rate %, Realized P&L (₹), and emotional discipline tagging.
+   - Click "Export CSV" to download your complete trade records.
+
+4. PRO UPGRADE & UPI QR GATEWAY:
+   - Click "Upgrade Pro".
+   - Step 1: Select Monthly (₹299) or Annual (₹2,999).
+   - Step 2: Notice the live UPI QR code mapped to your UPI ID (investor.shivam5049@ybl)
+     and HDFC Bank account details.
+   - Test mandatory 12-digit UTR input: Enter transaction reference -> Unlock Pro!
+   - Step 3: Download your official Tax Invoice receipt with UTR reference.
+   - Check /profile -> Status updates to "PRO Plan Active (Expires in 30 days)".
+
+5. MASTER ADMIN PORTAL:
+   - Go to /admin.
+   - Log in with Master Admin credentials:
+     Username: admin
+     Password: admin123 (or admin@123)
+   - Tab 1 (Users & Subscriptions): View all registered users, Free vs Paid breakdown,
+     verified UTR references, 1-month validity countdown, and 1-click plan overrides.
+   - Tab 2 (IPO Database): Add, edit, or delete active IPO records & Gift Point verdicts.
+   - Tab 3 (UPI & Bank Settings): Update your UPI ID, Merchant Name, Bank details,
+     and pricing live across the website with real-time QR preview.
+
+6. PRO AI COPILOT:
+   - Click the glowing "AI Investment Copilot" button in the bottom right corner.
+   - Click "Should I apply for Swiggy Limited IPO?" or "Analyze Hyundai Motor India".
+   - Notice the instant 6-pillar score, Gift Point verdict, moats, and DRHP red flags!
+
+
+================================================================================
+6. STEP 5: CONNECT YOUR CUSTOM DOMAIN (GODADDY / NAMECHEAP / HOSTINGER / CLOUDFLARE)
+================================================================================
+If you own a custom domain (e.g. yourname.in, investoriq.in, investorintelligence.com):
+
+1. Go to your project on Vercel:
+   https://vercel.com/dashboard -> Select your project -> Click "Settings" -> "Domains".
+
+2. In the domain input box, type your domain name (e.g. yourdomain.com or yourdomain.in)
+   and click "Add".
+
+3. Vercel will show you the exact DNS records to configure. Usually:
+   -----------------------------------------------------------------------------
+   Type:   A Record
+   Name:   @ (or leave blank depending on registrar)
+   Value:  76.76.21.21
+
+   Type:   CNAME Record
+   Name:   www
+   Value:  cname.vercel-dns.com
+   -----------------------------------------------------------------------------
+
+4. Log in to your Domain Registrar (GoDaddy, Namecheap, Hostinger, or Cloudflare):
+   - Go to "DNS Management" / "DNS Records".
+   - Add the A Record: Host = @, Points to = 76.76.21.21 (TTL: 1 Hour / Automatic).
+   - Add the CNAME Record: Host = www, Points to = cname.vercel-dns.com (TTL: 1 Hour).
+
+5. Back on Vercel, the domain status will turn green with a checkmark "Valid Configuration".
+   Vercel automatically issues and renews a FREE HTTPS/SSL Certificate for your domain!
+
+Your platform is now officially live on your custom domain (https://yourdomain.in)!
+
+
+================================================================================
+7. STEP 6: FUTURE UPDATES & MAINTENANCE (HOW TO PUSH CHANGES LIVE)
+================================================================================
+Whenever you make changes, edit text, or add new features in the future,
+you can deploy updates to production automatically with just 3 commands:
+
+1. Open PowerShell in your project folder.
+2. Run:
+   git add .
+   git commit -m "Describe what changes you made"
+   git push origin main
+
+3. That is it! Vercel and Render will automatically detect the push and deploy your
+   updated website in less than 60 seconds without any downtime.
+
+
+================================================================================
+8. STEP 7: MASTER ADMIN CREDENTIALS & PAYMENT GATEWAY SETTINGS
+================================================================================
+
+MASTER ADMIN LOGIN:
+--------------------------------------------------------------------------------
+Portal URL:      https://your-app.vercel.app/admin
+Admin Username:  admin  (or admin@investorintelligence.com)
+Admin Password:  admin123  (or admin@123)
+
+LIVE PAYMENT & BANK DETAILS (CONFIGURED):
+--------------------------------------------------------------------------------
+UPI ID / VPA:    investor.shivam5049@ybl
+Merchant Name:   Investor Intelligence Research Desk
+Bank Name:       HDFC Bank
+Account Number:  50100419751029
+IFSC Code:       HDFC0001882
+Monthly Price:   ₹299 / month (30 Days Validity)
+Annual Price:    ₹2,999 / year (365 Days Validity)
+
+PRIVATE TESTING COUPON CODES (EXCLUSIVE FOR YOU):
+--------------------------------------------------------------------------------
+TEST99:   99% Discount (Reduces ₹299 to ₹3 for live end-to-end UPI testing)
+SHIVAM99: 99% Discount (Reduces ₹299 to ₹3 for live end-to-end UPI testing)
+PRO100:   100% Free Developer Bypass (Instantly unlocks Pro for testing)
+
+Note: These promo codes are hidden from public users and can only be entered by
+clicking the discreet "Have a promo code?" toggle on the checkout modal.
+
+
+================================================================================
+CONGRATULATIONS! YOUR PLATFORM IS 100% COMPLETE, VERIFIED, AND READY TO LAUNCH!
+================================================================================
