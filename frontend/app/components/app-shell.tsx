@@ -201,20 +201,23 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
           <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-[#030712]/90 px-5 py-4 backdrop-blur-xl">
             <div className="flex items-center justify-between gap-4">
               {/* Mobile menu toggle & page title */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="rounded-xl border border-slate-800 bg-slate-900 p-2 text-slate-300 lg:hidden"
+                  className="rounded-xl border border-slate-800 bg-slate-900 p-2 text-slate-300 lg:hidden shrink-0"
+                  aria-label="Toggle Navigation"
                 >
-                  {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                  {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
                 </button>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-cyan-400">
-                      INVESTOR INTELLIGENCE PLATFORM
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[9px] sm:text-[11px] font-bold uppercase tracking-widest text-cyan-400 truncate">
+                      INVESTOR INTELLIGENCE
                     </p>
                   </div>
-                  <h1 className="font-heading text-xl md:text-2xl font-bold tracking-tight text-white">{title}</h1>
+                  <h1 className="font-heading text-sm sm:text-lg md:text-2xl font-bold tracking-tight text-white truncate max-w-[160px] xs:max-w-[220px] sm:max-w-none">
+                    {title}
+                  </h1>
                 </div>
               </div>
 
