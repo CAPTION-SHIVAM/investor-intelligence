@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FileText, ArrowLeft, ShieldCheck, Scale, CheckCircle2 } from 'lucide-react';
+import { FileText, ArrowLeft } from 'lucide-react';
 import { BrandLogo } from '../components/brand-logo';
 
 export default function TermsPage() {
@@ -50,27 +50,25 @@ export default function TermsPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-[#070d19] p-6">
-            <h3 className="font-heading text-base font-bold text-white mb-2">3. User Responsibility</h3>
+            <h3 className="font-heading text-base font-bold text-white mb-2">3. Non-SEBI Advisory Disclaimer</h3>
             <p>
-              You agree not to reverse engineer, scrape at abusive volume, or redistribute proprietary scoring models without express commercial authorization. All investment bids and portfolio actions remain your sole responsibility.
+              Investor Intelligence and its operators are not registered with the Securities and Exchange Board of India (SEBI) as Research Analysts or Investment Advisors. All data, scores, and indicators are generated programmatically and should never be construed as guaranteed returns or direct buy/sell recommendations.
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-[#070d19] p-6">
-            <h3 className="font-heading text-base font-bold text-white mb-2">4. Dispute Resolution &amp; Governing Law</h3>
+            <h3 className="font-heading text-base font-bold text-white mb-2">4. User Responsibility &amp; Market Risks</h3>
             <p>
-              These Terms shall be governed by the substantive laws of India. Any legal dispute or proceeding relating to the platform shall be subject to the exclusive jurisdiction of the courts located in India.
+              Securities market investments, Initial Public Offerings, and equity trading carry inherent financial risks. Users are exclusively responsible for verifying all financial information and consulting certified financial advisors before executing capital market transactions.
             </p>
           </div>
-        </div>
 
-        <div className="mt-10 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-6 py-2.5 text-xs font-bold text-slate-950 shadow-md hover:scale-105 transition"
-          >
-            <ArrowLeft size={14} /> Return to Platform
-          </Link>
+          <div className="rounded-2xl border border-slate-800 bg-[#070d19] p-6">
+            <h3 className="font-heading text-base font-bold text-white mb-2">5. Governing Law</h3>
+            <p>
+              These terms are governed in accordance with the laws of the Republic of India. Any disputes arising out of the platform shall be subject to the exclusive jurisdiction of the competent courts in India.
+            </p>
+          </div>
         </div>
       </div>
     </main>

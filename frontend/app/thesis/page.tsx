@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Plus, CheckCircle2, AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { AppShell } from '../components/app-shell';
 
 type Thesis = {
