@@ -127,6 +127,15 @@ def verify_or_submit_payment(payload: VerifyPaymentRequest) -> dict:
     clean_utr = (payload.transaction_ref or "").strip()
     is_free = payload.is_free_coupon or (payload.amount is not None and payload.amount == 0)
 
+    if not is_free:
+        if not clean_utr or len(clean_utr) != 12 or not clean_utr.isdigit():
+            raise HTTPException(status_code=400, detail="Invalid UTR: Must be exactly 12 numeric digits.")
+        if len(set(clean_utr)) == 1:
+            raise HTTPException(status_code=400, detail=f"Dummy UTR rejected: '{clean_utr}' is not a valid bank reference. Please complete payment via UPI.")
+        dummy_seqs = ["123456789012", "012345678901", "987654321098", "123456123456", "000000123456", "112233445566", "111122223333"]
+        if clean_utr in dummy_seqs:
+            raise HTTPException(status_code=400, detail=f"Dummy test sequence '{clean_utr}' rejected.")
+
     users = _load_users()
     clean_email = (payload.email or "").strip().lower()
 

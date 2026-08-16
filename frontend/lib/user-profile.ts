@@ -168,12 +168,26 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
  * Evaluates whether 1 month (or annual validity) has passed.
  * If expired, automatically reverts plan to 'FREE' and updates database.
  */
-export function checkAndEnforceSubscription(user: InvestorUser): InvestorUser {
-  if (!user) return user;
+export function checkAndEnforceSubscription(user: InvestorUser | null): InvestorUser | null {
+  if (!user) return null;
 
-  // Master Admin has permanent root access
+  // Master Admin always has Pro access
   if (user.role === 'ADMIN') {
-    return { ...user, plan: 'PRO', isExpired: false };
+    return { ...user, plan: 'PRO', isExpired: false, paymentStatus: 'VERIFIED' };
+  }
+
+  // If user has paymentStatus === 'PENDING' or 'REJECTED' or 'NONE', they MUST NOT have plan === 'PRO'
+  if (user.paymentStatus === 'PENDING' || user.paymentStatus === 'REJECTED') {
+    if (user.plan !== 'FREE') {
+      const fixedUser = { ...user, plan: 'FREE' as UserPlan };
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fixedUser));
+        } catch {}
+      }
+      return fixedUser;
+    }
+    return user;
   }
 
   // If already on Free plan, no expiration downgrade needed
@@ -497,9 +511,7 @@ export function registerUser(newUser: {
   const lName = newUser.lastName.trim() || 'Member';
   const initials = `${fName.charAt(0)}${lName.charAt(0)}`.toUpperCase();
 
-  const plan = newUser.plan || 'FREE';
-  const startDate = plan !== 'FREE' ? new Date().toISOString() : undefined;
-  const expiresAt = plan !== 'FREE' ? computeExpiryDate('monthly') : undefined;
+  const plan: UserPlan = cleanEmail.startsWith('admin@') ? 'PRO' : 'FREE';
 
   const createdUser: InvestorUser = {
     firstName: fName,
@@ -510,10 +522,11 @@ export function registerUser(newUser: {
     displayName: `${fName} ${lName}`.trim(),
     role: cleanEmail.startsWith('admin@') ? 'ADMIN' : 'USER',
     plan,
+    paymentStatus: 'NONE',
     joinedDate: new Date().toISOString().split('T')[0],
     lastLogin: 'Just now',
-    subscriptionStartDate: startDate,
-    subscriptionExpiresAt: expiresAt,
+    subscriptionStartDate: undefined,
+    subscriptionExpiresAt: undefined,
     isExpired: false,
   };
 
@@ -571,7 +584,6 @@ export async function authenticateUserAsync(
       }
       return { success: true, user: finalUser };
     } else if (!res.ok) {
-      // If 401 or bad credentials from server, return exact error
       if (res.status === 401 || res.status === 400) {
         return { success: false, error: data.detail || 'Invalid email or password.' };
       }
@@ -641,7 +653,7 @@ export function authenticateUser(
 
   // Check and enforce expiration on login
   const validUser = checkAndEnforceSubscription(found);
-  const updatedUser: InvestorUser = { ...validUser, lastLogin: 'Today' };
+  const updatedUser: InvestorUser = { ...(validUser || found), lastLogin: 'Today' };
   saveUserProfile(updatedUser);
   return { success: true, user: updatedUser };
 }
@@ -716,9 +728,84 @@ export function adminDeleteUser(email: string): boolean {
 }
 
 /**
+ * Validate Indian UPI UTR / Transaction Reference Number
+ * - Must be exactly 12 numeric digits
+ * - Rejects dummy repeating numbers (111111111111, 000000000000, 999999999999, etc.)
+ * - Rejects test sequential numbers (123456789012, 123456123456, 987654321098, etc.)
+ * - Rejects repetitive digit patterns
+ */
+export function validateUpiUtr(rawUtr: string): { valid: boolean; error?: string } {
+  const clean = rawUtr.trim();
+
+  if (!clean) {
+    return { valid: false, error: 'Please enter the 12-digit UPI Reference / UTR Number from your payment app.' };
+  }
+
+  // 1. Must be numeric only
+  if (!/^\d+$/.test(clean)) {
+    return { valid: false, error: 'UTR number must contain only numeric digits (0–9).' };
+  }
+
+  // 2. Must be exactly 12 digits
+  if (clean.length !== 12) {
+    return {
+      valid: false,
+      error: `Invalid UTR length: Must be exactly 12 digits (currently ${clean.length} digits).`,
+    };
+  }
+
+  // 3. Reject all identical repeating digits (e.g. 111111111111, 000000000000, 222222222222, etc.)
+  if (/^(\d)\1{11}$/.test(clean)) {
+    return {
+      valid: false,
+      error: `Fake/dummy UTR rejected: "${clean}" is not a real bank reference. You must complete the UPI payment and enter the genuine 12-digit UTR from GPay / PhonePe / Paytm / your banking app.`,
+    };
+  }
+
+  // 4. Reject common dummy/test sequences
+  const dummySequences = [
+    '123456789012',
+    '012345678901',
+    '987654321098',
+    '123456123456',
+    '000000123456',
+    '123456000000',
+    '112233445566',
+    '998877665544',
+    '121212121212',
+    '123123123123',
+    '111122223333',
+    '000011112222',
+    '123456789123',
+    '101010101010',
+    '202020202020',
+  ];
+
+  if (dummySequences.includes(clean)) {
+    return {
+      valid: false,
+      error: `Dummy test sequence rejected: "${clean}". Please enter the real 12-digit transaction ID generated by your UPI payment.`,
+    };
+  }
+
+  // 5. Reject if any single digit appears 9 or more times (e.g. 111111111234)
+  for (let d = 0; d <= 9; d++) {
+    const occurrences = clean.split('').filter((c) => c === d.toString()).length;
+    if (occurrences >= 9) {
+      return {
+        valid: false,
+        error: `Unrealistic UTR number: "${clean}" contains repeating dummy numbers. Please enter the genuine 12-digit UTR from your bank transaction.`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
  * Submit Payment Reference (UTR) for Verification
  * - If amount is 0 (e.g. 100% Free Coupon PRO100), unlocks immediately.
- * - If amount > 0, marks status as 'PENDING' without giving instant Pro access.
+ * - If amount > 0, validates genuine 12-digit non-dummy UTR and marks status as 'PENDING'.
  */
 export async function submitPaymentRequest(params: {
   utrRef: string;
@@ -732,14 +819,36 @@ export async function submitPaymentRequest(params: {
   instantUnlock: boolean;
   message: string;
 }> {
-  const current = getStoredUser();
+  let current = getStoredUser();
   if (!current) {
-    throw new Error('User not logged in.');
+    // If guest user, create a temporary guest profile with plan FREE
+    current = {
+      firstName: 'Guest',
+      lastName: 'Investor',
+      email: `guest_${Date.now().toString().slice(-6)}@investor.in`,
+      displayName: 'Guest Investor',
+      initials: 'GI',
+      role: 'USER',
+      plan: 'FREE',
+      paymentStatus: 'PENDING',
+      joinedDate: new Date().toISOString().split('T')[0],
+      lastLogin: 'Just now',
+      isExpired: false,
+    };
+    saveUserProfile(current);
   }
 
   const cleanUtr = params.utrRef.trim();
   const isZeroAmount = params.amount === 0;
   const nowIso = new Date().toISOString();
+
+  // Validate UTR for paid plans
+  if (!isZeroAmount) {
+    const validation = validateUpiUtr(cleanUtr);
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Invalid 12-digit UPI UTR number.');
+    }
+  }
 
   let updatedUser: InvestorUser;
 
@@ -765,6 +874,7 @@ export async function submitPaymentRequest(params: {
     // Paid Subscription -> Set to PENDING VERIFICATION, Keep plan as FREE (or existing)
     updatedUser = {
       ...current,
+      plan: current.role === 'ADMIN' ? 'PRO' : 'FREE',
       paymentStatus: 'PENDING',
       pendingPlan: params.plan,
       pendingBillingCycle: params.billingCycle,
@@ -783,7 +893,7 @@ export async function submitPaymentRequest(params: {
     try {
       const users = getRegisteredUsersRaw();
       const updatedList = users.map((u) =>
-        u.email.toLowerCase() === current.email.toLowerCase()
+        u.email.toLowerCase() === current!.email.toLowerCase()
           ? {
               ...u,
               ...updatedUser,

@@ -27,6 +27,7 @@ import {
   saveUserProfile,
   computeExpiryDate,
   submitPaymentRequest,
+  validateUpiUtr,
   type UserPlan,
 } from '../../lib/user-profile';
 import {
@@ -143,21 +144,18 @@ export function PaymentModal({ isOpen, onClose, initialPlan = 'PRO', onSuccess }
     setStep('CHECKOUT');
   };
 
-  // STRICT VERIFICATION & SUBMISSION: Requires genuine 12-digit numeric UTR
+  // STRICT VERIFICATION & SUBMISSION: Requires genuine 12-digit numeric non-dummy UTR
   const handleVerifyAndCompletePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaymentError('');
 
     const cleanUtr = utrNumber.trim();
 
-    // If payment is greater than 0, user MUST enter a valid 12-digit numeric UTR
+    // If payment is greater than 0, user MUST enter a valid, non-dummy 12-digit numeric UTR
     if (finalAmount > 0) {
-      if (!cleanUtr) {
-        setPaymentError('Please enter the 12-digit UPI UTR / Transaction Reference number after completing the payment.');
-        return;
-      }
-      if (cleanUtr.length !== 12 || !/^\d{12}$/.test(cleanUtr)) {
-        setPaymentError('Please enter a valid 12-digit numeric UPI Reference / UTR Number (e.g. 423819283921).');
+      const validation = validateUpiUtr(cleanUtr);
+      if (!validation.valid) {
+        setPaymentError(validation.error || 'Please enter a valid 12-digit numeric UPI Reference / UTR Number.');
         return;
       }
     }
@@ -189,15 +187,15 @@ export function PaymentModal({ isOpen, onClose, initialPlan = 'PRO', onSuccess }
       if (res.instantUnlock) {
         // Free promo code (₹0) -> instant success
         setStep('SUCCESS');
+        if (onSuccess) onSuccess();
       } else {
         // Paid subscription -> Pending Admin Verification
         setStep('PENDING_VERIFICATION');
+        // DO NOT call onSuccess() and DO NOT redirect! User remains on FREE until admin approves.
       }
-
-      if (onSuccess) onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Payment submission failed:', err);
-      setPaymentError('Failed to submit payment reference. Please try again.');
+      setPaymentError(err?.message || 'Failed to submit payment reference. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -694,8 +692,8 @@ For billing support: ${config.supportEmail}
             </div>
             <div>
               <h3 className="font-heading text-xl font-black text-white">Payment Submitted for Verification</h3>
-              <p className="mt-0.5 text-xs text-slate-300">
-                Your 12-digit reference for <strong className="text-cyan-400">Investor Intelligence {invoiceData.plan}</strong> has been logged.
+              <p className="mt-0.5 text-xs text-amber-300 font-bold">
+                ⚠️ Premium Access Remains Locked (Your Plan is FREE)
               </p>
             </div>
 
@@ -728,8 +726,13 @@ For billing support: ${config.supportEmail}
               </div>
             </div>
 
-            <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3 text-left text-[11px] text-slate-300 leading-relaxed">
-              💡 <strong className="text-white">What happens next?</strong> Our admin team will cross-check your 12-digit UTR against the bank ledger. Once verified, your Pro features will unlock automatically (usually within 5–15 minutes). You can track live status anytime on your Profile page.
+            <div className="rounded-xl bg-amber-950/30 border border-amber-500/30 p-3 text-left text-[11px] text-amber-200/90 leading-relaxed space-y-1">
+              <p>
+                🔒 <strong className="text-white">Anti-Fraud &amp; Ledger Check:</strong> Entering a 12-digit UTR does not grant instant Pro access.
+              </p>
+              <p className="text-slate-300">
+                Our administration desk verifies this reference directly in our bank statement. Once verified, your Pro membership will unlock automatically within 5–15 minutes.
+              </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
@@ -743,13 +746,10 @@ For billing support: ${config.supportEmail}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  router.push('/profile');
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-teal-400 to-cyan-400 py-2.5 text-xs font-black text-slate-950 shadow-md transition hover:scale-[1.02]"
+                onClick={onClose}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 border border-slate-700 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700 transition"
               >
-                <span>Track in Profile →</span>
+                <span>Close (Continue Free)</span>
               </button>
             </div>
           </div>
