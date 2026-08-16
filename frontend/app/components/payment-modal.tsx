@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Crown,
   CheckCircle2,
@@ -18,9 +19,16 @@ import {
   Tag,
   AlertCircle,
   Clock,
+  ExternalLink,
 } from 'lucide-react';
 import { postJson } from '../../lib/api';
-import { getStoredUser, saveUserProfile, computeExpiryDate, type UserPlan } from '../../lib/user-profile';
+import {
+  getStoredUser,
+  saveUserProfile,
+  computeExpiryDate,
+  submitPaymentRequest,
+  type UserPlan,
+} from '../../lib/user-profile';
 import {
   getPaymentConfig,
   validateCouponCode,
@@ -35,10 +43,11 @@ type PaymentModalProps = {
 };
 
 export function PaymentModal({ isOpen, onClose, initialPlan = 'PRO', onSuccess }: PaymentModalProps) {
+  const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<UserPlan>(initialPlan);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CARD' | 'NETBANKING'>('UPI');
-  const [step, setStep] = useState<'SELECT' | 'CHECKOUT' | 'SUCCESS'>('SELECT');
+  const [step, setStep] = useState<'SELECT' | 'CHECKOUT' | 'PENDING_VERIFICATION' | 'SUCCESS'>('SELECT');
   const [loading, setLoading] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState(false);
@@ -134,21 +143,21 @@ export function PaymentModal({ isOpen, onClose, initialPlan = 'PRO', onSuccess }
     setStep('CHECKOUT');
   };
 
-  // REAL VERIFICATION: Requires actual UTR / Txn reference before upgrading to PRO
+  // STRICT VERIFICATION & SUBMISSION: Requires genuine 12-digit numeric UTR
   const handleVerifyAndCompletePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaymentError('');
 
     const cleanUtr = utrNumber.trim();
 
-    // If payment is greater than 0, user MUST enter a valid UTR / Txn Reference
+    // If payment is greater than 0, user MUST enter a valid 12-digit numeric UTR
     if (finalAmount > 0) {
       if (!cleanUtr) {
         setPaymentError('Please enter the 12-digit UPI UTR / Transaction Reference number after completing the payment.');
         return;
       }
-      if (cleanUtr.length < 6) {
-        setPaymentError('Please enter a valid Transaction Ref / UTR number (at least 6-12 digits from your payment app).');
+      if (cleanUtr.length !== 12 || !/^\d{12}$/.test(cleanUtr)) {
+        setPaymentError('Please enter a valid 12-digit numeric UPI Reference / UTR Number (e.g. 423819283921).');
         return;
       }
     }
@@ -156,43 +165,15 @@ export function PaymentModal({ isOpen, onClose, initialPlan = 'PRO', onSuccess }
     setLoading(true);
 
     try {
-      type VerifyRes = {
-        success: boolean;
-        data: {
-          status: string;
-          order_id: string;
-          invoice_id: string;
-          transaction_ref: string;
-        };
-      };
-
-      const txnRef = cleanUtr || `FREE-PASS-${Date.now().toString().slice(-6)}`;
       const orderId = `ORD-${Date.now().toString().slice(-6)}`;
+      const txnRef = cleanUtr || `FREE-PASS-${Date.now().toString().slice(-6)}`;
 
-      // Call backend payment verification
-      try {
-        await postJson<VerifyRes>('/billing/verify-payment', {
-          order_id: orderId,
-          payment_method: paymentMethod,
-          transaction_ref: txnRef,
-        });
-      } catch (backendErr) {
-        console.warn('Backend verify endpoint notice:', backendErr);
-      }
-
-      // ONLY NOW UPGRADE USER PROFILE TO PRO ONCE PAYMENT UTR IS VERIFIED!
-      const user = getStoredUser();
-      const startDate = new Date().toISOString();
-      const expiresAt = computeExpiryDate(billingCycle);
-
-      const updatedUser = saveUserProfile({
-        ...user,
+      const res = await submitPaymentRequest({
+        utrRef: txnRef,
         plan: selectedPlan,
         billingCycle: billingCycle,
-        subscriptionStartDate: startDate,
-        subscriptionExpiresAt: expiresAt,
-        isExpired: false,
-        utrRef: txnRef,
+        amount: finalAmount,
+        couponCode: appliedCoupon?.code,
       });
 
       setInvoiceData({
@@ -205,14 +186,57 @@ export function PaymentModal({ isOpen, onClose, initialPlan = 'PRO', onSuccess }
         txnRef: txnRef,
       });
 
-      setStep('SUCCESS');
+      if (res.instantUnlock) {
+        // Free promo code (₹0) -> instant success
+        setStep('SUCCESS');
+      } else {
+        // Paid subscription -> Pending Admin Verification
+        setStep('PENDING_VERIFICATION');
+      }
+
       if (onSuccess) onSuccess();
     } catch (err) {
-      console.error('Payment verification failed:', err);
-      setPaymentError('Payment verification failed. Please check your transaction reference.');
+      console.error('Payment submission failed:', err);
+      setPaymentError('Failed to submit payment reference. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadSubmissionSlip = () => {
+    if (!invoiceData) return;
+    const content = `=====================================================
+PAYMENT SUBMISSION SLIP - PENDING ADMIN VERIFICATION
+INVESTOR INTELLIGENCE RESEARCH PLATFORMS INDIA
+=====================================================
+Submission ID: ${invoiceData.invoiceId}
+Transaction Ref / UTR: ${invoiceData.txnRef}
+Date: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
+Status: UNDER VERIFICATION (Pending Admin Approval)
+
+Requested Plan: ${invoiceData.plan} Investor Intelligence Membership
+Billing Term: ${billingCycle.toUpperCase()}
+Amount Paid: ₹${invoiceData.amount} INR
+${invoiceData.couponCode ? `Coupon Applied: ${invoiceData.couponCode} (-₹${invoiceData.discountAmount})\n` : ''}Payee UPI ID: ${config.upiId} (${config.merchantName})
+Bank Account: ${config.accountNumber} (${config.bankName}, IFSC: ${config.ifscCode})
+
+-----------------------------------------------------
+NOTICE & ACTIVATION POLICY:
+Your 12-digit transaction reference has been logged in
+the verification queue. Once verified against our bank
+statement by the administration team, your Pro Plan
+will be automatically unlocked within 5–15 minutes.
+-----------------------------------------------------
+For billing support: ${config.supportEmail}
+=====================================================`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `SubmissionSlip_${invoiceData.invoiceId}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDownloadReceipt = () => {
@@ -595,20 +619,39 @@ For billing support: ${config.supportEmail}
 
             {/* MANDATORY PAYMENT VERIFICATION: 12-DIGIT UTR / TRANSACTION REF INPUT */}
             {finalAmount > 0 && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs space-y-1.5">
-                <label className="block font-bold text-amber-300">
-                  2. Enter 12-Digit UPI Reference / UTR No. (Mandatory)
-                </label>
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-amber-300">
+                    2. Enter 12-Digit UPI Ref / UTR No. (Mandatory)
+                  </label>
+                  <span
+                    className={`font-mono-code text-[11px] font-bold px-2 py-0.5 rounded transition ${
+                      utrNumber.length === 12
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-slate-900 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {utrNumber.length}/12 digits {utrNumber.length === 12 ? '✓' : ''}
+                  </span>
+                </div>
                 <input
                   required
+                  type="text"
+                  maxLength={12}
                   value={utrNumber}
-                  onChange={(e) => setUtrNumber(e.target.value)}
-                  placeholder="e.g. 423819283921 (shown in GPay / PhonePe / Paytm)"
-                  className="w-full rounded-lg border border-amber-500/50 bg-slate-950 px-3 py-2 text-white font-mono-code text-xs placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+                  onChange={(e) => setUtrNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                  placeholder="e.g. 423819283921 (12 digits from GPay / PhonePe / Paytm)"
+                  className="w-full rounded-lg border border-amber-500/50 bg-slate-950 px-3 py-2 text-white font-mono-code text-xs placeholder:text-slate-500 focus:border-amber-400 focus:outline-none tracking-wider"
                 />
-                <p className="text-[10px] text-slate-400">
-                  Your Pro account will be verified and unlocked immediately after entering the transaction reference.
-                </p>
+                <div className="rounded-lg bg-slate-950/80 border border-slate-800 p-2.5 text-[10px] text-slate-300 space-y-1">
+                  <p className="flex items-center gap-1 text-amber-300 font-semibold">
+                    <ShieldCheck size={12} />
+                    <span>Payment Verification &amp; Anti-Fraud Policy:</span>
+                  </p>
+                  <p className="text-slate-400 leading-relaxed">
+                    Your Pro access will be verified and unlocked once your 12-digit UTR is confirmed against our bank statement by the admin. Unpaid or fake transaction references will not be approved.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -633,20 +676,93 @@ For billing support: ${config.supportEmail}
                 disabled={loading}
                 className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 py-2.5 text-xs font-extrabold text-slate-950 shadow-md shadow-cyan-500/25 transition hover:scale-[1.01] disabled:opacity-50"
               >
-                {loading ? 'Verifying Transaction...' : `Verify Payment & Unlock ${selectedPlan}`}
+                {loading
+                  ? 'Submitting Reference...'
+                  : finalAmount === 0
+                  ? `Activate Free Pass & Unlock ${selectedPlan}`
+                  : `Submit 12-Digit UTR for Verification`}
               </button>
             </div>
           </form>
         )}
 
-        {/* STEP 3: SUCCESS & INVOICE */}
+        {/* STEP 3A: PENDING VERIFICATION (For Paid UPI / UTR) */}
+        {step === 'PENDING_VERIFICATION' && invoiceData && (
+          <div className="text-center py-2 space-y-3">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-lg animate-pulse">
+              <Clock size={30} />
+            </div>
+            <div>
+              <h3 className="font-heading text-xl font-black text-white">Payment Submitted for Verification</h3>
+              <p className="mt-0.5 text-xs text-slate-300">
+                Your 12-digit reference for <strong className="text-cyan-400">Investor Intelligence {invoiceData.plan}</strong> has been logged.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/30 bg-slate-950 p-3 text-left text-xs space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Submission ID:</span>
+                <span className="font-mono-code font-bold text-white">{invoiceData.invoiceId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Submitted UTR Ref:</span>
+                <span className="font-mono-code font-bold text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-500/30">
+                  {invoiceData.txnRef}
+                </span>
+              </div>
+              {invoiceData.couponCode && (
+                <div className="flex justify-between text-emerald-400">
+                  <span>Coupon Applied:</span>
+                  <span className="font-bold">{invoiceData.couponCode} (-₹{invoiceData.discountAmount})</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-400">Amount to Verify:</span>
+                <span className="font-bold text-white">₹{invoiceData.amount} ({billingCycle} plan)</span>
+              </div>
+              <div className="flex justify-between items-center pt-1.5 border-t border-slate-800">
+                <span className="text-slate-400">Current Status:</span>
+                <span className="inline-flex items-center gap-1 font-bold text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/30 text-[10px] uppercase tracking-wider">
+                  <Clock size={11} /> Pending Admin Verification
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3 text-left text-[11px] text-slate-300 leading-relaxed">
+              💡 <strong className="text-white">What happens next?</strong> Our admin team will cross-check your 12-digit UTR against the bank ledger. Once verified, your Pro features will unlock automatically (usually within 5–15 minutes). You can track live status anytime on your Profile page.
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleDownloadSubmissionSlip}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 transition"
+              >
+                <Download size={13} />
+                <span>Download Slip</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  router.push('/profile');
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-teal-400 to-cyan-400 py-2.5 text-xs font-black text-slate-950 shadow-md transition hover:scale-[1.02]"
+              >
+                <span>Track in Profile →</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3B: INSTANT SUCCESS (For 100% Free Coupon Passes) */}
         {step === 'SUCCESS' && invoiceData && (
           <div className="text-center py-3 space-y-3">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg">
               <CheckCircle2 size={30} />
             </div>
             <div>
-              <h3 className="font-heading text-xl font-black text-white">Payment Verified &amp; Activated!</h3>
+              <h3 className="font-heading text-xl font-black text-white">Free Pass Activated!</h3>
               <p className="mt-0.5 text-xs text-slate-300">
                 Welcome to <strong className="text-cyan-400">Investor Intelligence {invoiceData.plan}</strong>.
               </p>
@@ -658,18 +774,18 @@ For billing support: ${config.supportEmail}
                 <span className="font-mono-code font-bold text-white">{invoiceData.invoiceId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Verified UTR / Ref:</span>
+                <span className="text-slate-400">Reference:</span>
                 <span className="font-mono-code font-bold text-emerald-400">{invoiceData.txnRef}</span>
               </div>
               {invoiceData.couponCode && (
                 <div className="flex justify-between text-emerald-400">
                   <span>Coupon Applied:</span>
-                  <span className="font-bold">{invoiceData.couponCode} (-₹{invoiceData.discountAmount})</span>
+                  <span className="font-bold">{invoiceData.couponCode} (100% Free Pass)</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-slate-400">Amount Paid:</span>
-                <span className="font-bold text-white">₹{invoiceData.amount} ({billingCycle} plan)</span>
+                <span className="font-bold text-white">₹0 (Free promotional activation)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Account Status:</span>

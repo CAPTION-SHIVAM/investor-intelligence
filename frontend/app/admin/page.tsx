@@ -41,6 +41,9 @@ import {
   getRegisteredUsers,
   adminUpdateUserPlan,
   adminDeleteUser,
+  adminApprovePayment,
+  adminRejectPayment,
+  getPendingPayments,
   getSubscriptionInfo,
   type InvestorUser,
   type UserPlan,
@@ -91,8 +94,9 @@ export default function AdminPage() {
   const [adminTab, setAdminTab] = useState<'IPOS' | 'USERS' | 'PAYMENT'>('USERS');
 
   // User Filter State
-  const [userFilter, setUserFilter] = useState<'ALL' | 'PAID' | 'FREE'>('ALL');
+  const [userFilter, setUserFilter] = useState<'ALL' | 'PENDING' | 'PAID' | 'FREE'>('ALL');
   const [userSearch, setUserSearch] = useState('');
+  const [copiedPendingUtr, setCopiedPendingUtr] = useState<string | null>(null);
 
   // Admin Auth State
   const [adminUser, setAdminUser] = useState('');
@@ -204,6 +208,26 @@ export default function AdminPage() {
       loadUsers();
       setSaveSuccess(`Updated user (${email}) plan to ${newPlan}.`);
       setTimeout(() => setSaveSuccess(null), 3000);
+    }
+  };
+
+  const handleApprovePendingPayment = async (email: string) => {
+    const ok = await adminApprovePayment(email);
+    if (ok) {
+      loadUsers();
+      setSaveSuccess(`Payment verified & approved! Pro plan unlocked for ${email}.`);
+      setTimeout(() => setSaveSuccess(null), 3500);
+    }
+  };
+
+  const handleRejectPendingPayment = async (email: string) => {
+    const reason = prompt('Enter rejection reason (or press OK for default):', 'Payment not found in bank statement / Invalid UTR');
+    if (reason === null) return;
+    const ok = await adminRejectPayment(email, reason || 'Payment not found in bank statement / Invalid UTR');
+    if (ok) {
+      loadUsers();
+      setSaveSuccess(`Payment rejected for ${email}.`);
+      setTimeout(() => setSaveSuccess(null), 3500);
     }
   };
 
@@ -364,6 +388,8 @@ export default function AdminPage() {
 
   // Analytics Computation for Users & Subscriptions
   const totalUsersCount = registeredUsers.length;
+  const pendingPaymentsList = registeredUsers.filter((u) => u.paymentStatus === 'PENDING');
+  const pendingCount = pendingPaymentsList.length;
   const paidProCount = registeredUsers.filter((u) => u.plan === 'PRO').length;
   const paidInstCount = registeredUsers.filter((u) => u.plan === 'INSTITUTIONAL').length;
   const totalPaidCount = paidProCount + paidInstCount;
@@ -376,6 +402,8 @@ export default function AdminPage() {
     const matchesFilter =
       userFilter === 'ALL'
         ? true
+        : userFilter === 'PENDING'
+        ? u.paymentStatus === 'PENDING'
         : userFilter === 'PAID'
         ? u.plan === 'PRO' || u.plan === 'INSTITUTIONAL'
         : u.plan === 'FREE';
@@ -423,6 +451,11 @@ export default function AdminPage() {
                 >
                   <Users size={13} />
                   <span>Users &amp; Subscriptions ({registeredUsers.length})</span>
+                  {pendingCount > 0 && (
+                    <span className="rounded-full bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.2">
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setAdminTab('IPOS')}
@@ -450,18 +483,23 @@ export default function AdminPage() {
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-3.5 py-1.5 text-xs font-extrabold text-slate-950 shadow-md transition hover:scale-105"
                 >
                   <PlusCircle size={14} />
-                  <span>Add IPO</span>
+                  <span>Add New IPO</span>
                 </button>
               )}
             </div>
           )}
         </div>
 
-        {/* Success Alert */}
+        {/* Global Save / Action Notification */}
         {saveSuccess && (
-          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-4 text-xs font-bold text-emerald-300 flex items-center gap-2">
-            <CheckCircle2 size={16} />
-            <span>{saveSuccess}</span>
+          <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/40 p-4 text-xs font-bold text-emerald-300 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span>{saveSuccess}</span>
+            </div>
+            <button onClick={() => setSaveSuccess(null)} className="text-slate-400 hover:text-white">
+              <X size={14} />
+            </button>
           </div>
         )}
 
@@ -514,52 +552,43 @@ export default function AdminPage() {
           /* TAB 1: USERS & SUBSCRIPTION MANAGEMENT SECTION (FREE VS PAID BREAKDOWN) */
           /* ========================================================================= */
           <div className="space-y-6">
-            {/* KPI Analytics Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Card 1: Total Users */}
+            {/* Top Analytics Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Card 1: Total Registered */}
               <div className="rounded-3xl border border-slate-800 bg-[#070d19] p-5 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400">Total Registered Users</span>
-                  <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400">
+                  <span className="text-xs font-semibold text-slate-400">Total Users</span>
+                  <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                     <Users size={18} />
                   </div>
                 </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="font-heading text-3xl font-black text-white">{totalUsersCount}</span>
-                  <span className="text-xs font-bold text-slate-400">Accounts</span>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-400">Active accounts in database</p>
+                <p className="mt-3 font-heading text-3xl font-black text-white">{totalUsersCount}</p>
+                <p className="mt-1 text-[11px] text-slate-400">Active investor accounts</p>
               </div>
 
-              {/* Card 2: Free Starter Plan */}
-              <div className="rounded-3xl border border-slate-800 bg-[#070d19] p-5 shadow-lg">
+              {/* Card 2: Pending Approvals */}
+              <div className="rounded-3xl border border-amber-500/40 bg-amber-950/20 p-5 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400">Free Starter Users</span>
-                  <div className="p-2 rounded-xl bg-slate-800 text-slate-300">
-                    <Zap size={18} />
+                  <span className="text-xs font-semibold text-amber-300">Pending Approvals</span>
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    <Clock size={18} />
                   </div>
                 </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="font-heading text-3xl font-black text-slate-200">{freeUsersCount}</span>
-                  <span className="text-xs font-bold text-slate-400">Free Logins</span>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-400">Viewing basic calendar &amp; bands</p>
+                <p className="mt-3 font-heading text-3xl font-black text-amber-300">{pendingCount}</p>
+                <p className="mt-1 text-[11px] text-amber-400/80">UTR verifications waiting</p>
               </div>
 
-              {/* Card 3: Paid Pro Subscribers */}
-              <div className="rounded-3xl border border-cyan-500/30 bg-[#070d19] p-5 shadow-lg">
+              {/* Card 3: Paid Subscribers */}
+              <div className="rounded-3xl border border-slate-800 bg-[#070d19] p-5 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-cyan-300">Paid Subscribers</span>
-                  <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  <span className="text-xs font-semibold text-slate-400">Paid Subscribers</span>
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
                     <Crown size={18} />
                   </div>
                 </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="font-heading text-3xl font-black text-cyan-400">{totalPaidCount}</span>
-                  <span className="text-xs font-bold text-cyan-300">Paid Plans</span>
-                </div>
+                <p className="mt-3 font-heading text-3xl font-black text-cyan-400">{totalPaidCount}</p>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  {paidProCount} Pro (₹{paymentConfig.monthlyPrice}/mo) · {paidInstCount} VIP
+                  {paidProCount} Pro · {paidInstCount} VIP
                 </p>
               </div>
 
@@ -580,6 +609,112 @@ export default function AdminPage() {
                 <p className="mt-1 text-[11px] text-slate-400">Direct to your UPI / HDFC A/C</p>
               </div>
             </div>
+
+            {/* PENDING UPI PAYMENT APPROVALS QUEUE (HIGHLIGHTED) */}
+            {pendingPaymentsList.length > 0 && (
+              <div className="rounded-3xl border border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-[#0a0f1d] to-amber-500/5 p-6 shadow-2xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-heading text-base font-black text-white flex items-center gap-2">
+                        <span>Pending UPI Payment Approvals</span>
+                        <span className="rounded-full bg-amber-400 text-slate-950 px-2 py-0.5 text-[10px] font-black">
+                          {pendingPaymentsList.length} WAITING
+                        </span>
+                      </h3>
+                      <p className="text-xs text-amber-200/80 mt-0.5">
+                        These users submitted a 12-digit UTR. Match against your bank statement and approve to unlock Pro access.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="border-b border-amber-500/20 bg-amber-950/40 text-amber-300 uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="px-4 py-2.5">User &amp; Email</th>
+                        <th className="px-3 py-2.5">Requested Plan</th>
+                        <th className="px-3 py-2.5">Submitted 12-Digit UTR</th>
+                        <th className="px-3 py-2.5">Amount</th>
+                        <th className="px-3 py-2.5">Submitted</th>
+                        <th className="px-4 py-2.5 text-right">Verification Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-500/10">
+                      {pendingPaymentsList.map((p) => (
+                        <tr key={p.email} className="hover:bg-amber-500/5 transition">
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-white block">{p.displayName}</span>
+                            <span className="text-[11px] text-slate-400">{p.email}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                              <Crown size={10} />
+                              <span>{p.pendingPlan || 'PRO'}</span>
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono-code font-bold text-amber-300 bg-amber-950/60 px-2 py-1 rounded border border-amber-500/40 tracking-wider">
+                                {p.utrRef}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (p.utrRef) {
+                                    navigator.clipboard.writeText(p.utrRef);
+                                    setCopiedPendingUtr(p.utrRef);
+                                    setTimeout(() => setCopiedPendingUtr(null), 2000);
+                                  }
+                                }}
+                                className="text-slate-400 hover:text-white"
+                                title="Copy UTR"
+                              >
+                                {copiedPendingUtr === p.utrRef ? (
+                                  <CheckCircle2 size={13} className="text-emerald-400" />
+                                ) : (
+                                  <Copy size={13} />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 font-bold text-emerald-400">
+                            ₹{p.pendingAmount || paymentConfig.monthlyPrice}
+                          </td>
+                          <td className="px-3 py-3 text-slate-400 text-[11px]">
+                            {p.paymentSubmittedAt ? new Date(p.paymentSubmittedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleApprovePendingPayment(p.email)}
+                                className="flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-emerald-400 transition shadow-sm"
+                              >
+                                <CheckCircle2 size={13} />
+                                <span>Approve &amp; Unlock</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectPendingPayment(p.email)}
+                                className="flex items-center gap-1 rounded-lg bg-rose-950/80 border border-rose-500/40 px-2.5 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-900 transition"
+                              >
+                                <X size={13} />
+                                <span>Reject</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Users Table Card */}
             <div className="rounded-3xl border border-slate-800 bg-[#070d19] p-6 shadow-xl">
@@ -605,6 +740,16 @@ export default function AdminPage() {
                     >
                       All ({totalUsersCount})
                     </button>
+                    {pendingCount > 0 && (
+                      <button
+                        onClick={() => setUserFilter('PENDING')}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
+                          userFilter === 'PENDING' ? 'bg-amber-400 text-slate-950' : 'text-amber-400 hover:text-white'
+                        }`}
+                      >
+                        Pending ({pendingCount})
+                      </button>
+                    )}
                     <button
                       onClick={() => setUserFilter('PAID')}
                       className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
@@ -663,6 +808,8 @@ export default function AdminPage() {
                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
                                   isPaid
                                     ? 'bg-gradient-to-tr from-cyan-400 to-emerald-400 text-slate-950 shadow-sm'
+                                    : u.paymentStatus === 'PENDING'
+                                    ? 'bg-amber-400 text-slate-950'
                                     : 'bg-slate-800 text-slate-300'
                                 }`}
                               >
@@ -683,6 +830,8 @@ export default function AdminPage() {
                                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                                   : u.plan === 'INSTITUTIONAL'
                                   ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                  : u.paymentStatus === 'PENDING'
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                                   : 'bg-slate-800 text-slate-400 border border-slate-700'
                               }`}
                             >
@@ -690,10 +839,12 @@ export default function AdminPage() {
                                 <Crown size={11} className="text-cyan-400" />
                               ) : u.plan === 'INSTITUTIONAL' ? (
                                 <Sparkles size={11} className="text-purple-400" />
+                              ) : u.paymentStatus === 'PENDING' ? (
+                                <Clock size={11} className="text-amber-400" />
                               ) : (
                                 <Zap size={11} className="text-slate-400" />
                               )}
-                              <span>{u.plan}</span>
+                              <span>{u.paymentStatus === 'PENDING' ? `FREE (${u.pendingPlan || 'PRO'} PENDING)` : u.plan}</span>
                             </span>
                           </td>
 
@@ -708,6 +859,15 @@ export default function AdminPage() {
                                 </span>
                                 <span className="text-[10px] text-slate-400 block font-mono-code">
                                   Expires {sub.formattedExpiryDate}
+                                </span>
+                              </div>
+                            ) : u.paymentStatus === 'PENDING' ? (
+                              <div>
+                                <span className="rounded bg-amber-950/60 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-black uppercase flex items-center gap-1 w-max">
+                                  <Clock size={10} /> Pending Verification
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  Waiting for Admin approval
                                 </span>
                               </div>
                             ) : u.isExpired ? (
@@ -726,7 +886,21 @@ export default function AdminPage() {
 
                           {/* Payment Reference / UTR */}
                           <td className="px-3 py-3.5">
-                            {u.utrRef ? (
+                            {u.paymentStatus === 'PENDING' ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono-code font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/40">
+                                  {u.utrRef}
+                                </span>
+                                <span className="text-[10px] text-amber-400 font-bold uppercase">(Pending)</span>
+                              </div>
+                            ) : u.paymentStatus === 'REJECTED' ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono-code font-bold text-rose-300 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/30 line-through">
+                                  {u.utrRef}
+                                </span>
+                                <span className="text-[10px] text-rose-400 font-bold uppercase">(Rejected)</span>
+                              </div>
+                            ) : u.utrRef ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="font-mono-code font-bold text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
                                   {u.utrRef}
@@ -746,7 +920,24 @@ export default function AdminPage() {
                           {/* Admin Action Buttons */}
                           <td className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {u.plan === 'FREE' ? (
+                              {u.paymentStatus === 'PENDING' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleApprovePendingPayment(u.email)}
+                                    className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[11px] font-black text-slate-950 hover:bg-emerald-400 transition"
+                                    title="Approve UTR & Unlock Pro"
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectPendingPayment(u.email)}
+                                    className="rounded-lg bg-rose-950/80 border border-rose-500/30 px-2 py-1 text-[11px] font-bold text-rose-300 hover:bg-rose-900 transition"
+                                    title="Reject Payment"
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                </>
+                              ) : u.plan === 'FREE' ? (
                                 <button
                                   onClick={() => handleUpdateUserPlan(u.email, 'PRO')}
                                   className="rounded-lg bg-cyan-500/20 border border-cyan-500/40 px-2.5 py-1 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition"

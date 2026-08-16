@@ -30,6 +30,7 @@ DEFAULT_USERS: List[Dict[str, Any]] = [
         "subscriptionStartDate": "2026-08-01T00:00:00.000Z",
         "subscriptionExpiresAt": "2099-12-31T23:59:59.000Z",
         "isExpired": False,
+        "paymentStatus": "VERIFIED",
     },
     {
         "id": "usr_shivam",
@@ -44,6 +45,27 @@ DEFAULT_USERS: List[Dict[str, Any]] = [
         "utrRef": "UPI/423188902144",
         "subscriptionStartDate": "2026-08-10T10:00:00.000Z",
         "subscriptionExpiresAt": "2026-09-09T10:00:00.000Z",
+        "isExpired": False,
+        "paymentStatus": "VERIFIED",
+    },
+    {
+        "id": "usr_arjun",
+        "email": "arjun.mehta@startup.io",
+        "password": "password123",
+        "displayName": "Arjun Mehta",
+        "initials": "AM",
+        "role": "USER",
+        "plan": "FREE",
+        "joinedDate": "2026-08-16",
+        "lastLogin": "2026-08-16",
+        "utrRef": "423819208311",
+        "paymentStatus": "PENDING",
+        "pendingPlan": "PRO",
+        "pendingBillingCycle": "monthly",
+        "pendingAmount": 299,
+        "paymentSubmittedAt": "2026-08-16T15:30:00.000Z",
+        "subscriptionStartDate": None,
+        "subscriptionExpiresAt": None,
         "isExpired": False,
     },
     {
@@ -60,6 +82,7 @@ DEFAULT_USERS: List[Dict[str, Any]] = [
         "subscriptionStartDate": "2026-08-12T10:00:00.000Z",
         "subscriptionExpiresAt": "2026-09-11T10:00:00.000Z",
         "isExpired": False,
+        "paymentStatus": "VERIFIED",
     },
     {
         "id": "usr_priya",
@@ -75,6 +98,7 @@ DEFAULT_USERS: List[Dict[str, Any]] = [
         "subscriptionStartDate": None,
         "subscriptionExpiresAt": None,
         "isExpired": False,
+        "paymentStatus": "NONE",
     },
 ]
 

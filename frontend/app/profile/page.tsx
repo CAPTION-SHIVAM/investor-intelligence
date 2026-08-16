@@ -166,6 +166,85 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Pending Payment Verification Banner */}
+        {user?.paymentStatus === 'PENDING' && (
+          <div className="rounded-3xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-slate-950 to-amber-500/5 p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0 animate-pulse">
+                  <Clock size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-heading text-base font-black text-white">
+                      UPI Payment Verification in Progress
+                    </h4>
+                    <span className="rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                      Under Review
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Your 12-digit transaction reference for the <strong className="text-cyan-400">{user.pendingPlan || 'PRO'} Membership</strong> has been submitted. Our team is verifying this with bank statements.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsPaymentOpen(true)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition shrink-0"
+              >
+                <span>Update UTR / Slip</span>
+              </button>
+            </div>
+
+            {/* Verification Details Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-amber-500/20 text-xs">
+              <div className="rounded-xl bg-slate-950/80 p-2.5 border border-slate-800">
+                <span className="text-[11px] text-slate-400 block">Submitted UTR:</span>
+                <span className="font-mono-code font-bold text-amber-300">{user.utrRef || 'N/A'}</span>
+              </div>
+              <div className="rounded-xl bg-slate-950/80 p-2.5 border border-slate-800">
+                <span className="text-[11px] text-slate-400 block">Requested Plan:</span>
+                <span className="font-bold text-white uppercase">{user.pendingPlan || 'PRO'}</span>
+              </div>
+              <div className="rounded-xl bg-slate-950/80 p-2.5 border border-slate-800">
+                <span className="text-[11px] text-slate-400 block">Amount:</span>
+                <span className="font-bold text-emerald-400">₹{user.pendingAmount || 299}</span>
+              </div>
+              <div className="rounded-xl bg-slate-950/80 p-2.5 border border-slate-800">
+                <span className="text-[11px] text-slate-400 block">Estimated Time:</span>
+                <span className="font-bold text-cyan-300">5 – 15 Mins</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rejected Payment Banner if UTR was invalid or unpaid */}
+        {user?.paymentStatus === 'REJECTED' && (
+          <div className="rounded-3xl border border-rose-500/40 bg-rose-950/30 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h4 className="font-heading text-sm font-bold text-rose-300">
+                  Payment Verification Unsuccessful
+                </h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  The submitted reference (<strong className="font-mono-code text-rose-200">{user.utrRef}</strong>) could not be verified in the bank statement: {user.rejectionReason || 'Invalid UTR / Payment not received'}. Please re-submit your valid 12-digit UPI UTR.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsPaymentOpen(true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 px-4 py-2.5 text-xs font-black text-slate-950 shadow-md transition hover:scale-105 shrink-0"
+            >
+              <RotateCcw size={14} />
+              <span>Re-submit Correct UTR</span>
+            </button>
+          </div>
+        )}
+
         {/* Expired Subscription Banner if 1 month has passed and reverted to Free */}
         {user?.isExpired && (
           <div className="rounded-3xl border border-amber-500/40 bg-amber-950/30 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -1,4 +1,5 @@
 export type UserPlan = 'FREE' | 'PRO' | 'INSTITUTIONAL';
+export type PaymentStatus = 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 export type InvestorUser = {
   firstName: string;
@@ -16,6 +17,12 @@ export type InvestorUser = {
   subscriptionStartDate?: string;
   subscriptionExpiresAt?: string;
   isExpired?: boolean;
+  paymentStatus?: PaymentStatus;
+  pendingPlan?: UserPlan;
+  pendingBillingCycle?: 'monthly' | 'annual';
+  pendingAmount?: number;
+  paymentSubmittedAt?: string;
+  rejectionReason?: string;
 };
 
 const STORAGE_KEY = 'investoriq_user';
@@ -51,6 +58,7 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     subscriptionStartDate: '2026-08-10T10:00:00.000Z',
     subscriptionExpiresAt: '2026-09-09T10:00:00.000Z', // 24 days remaining
     isExpired: false,
+    paymentStatus: 'VERIFIED',
   },
   {
     firstName: 'Ananya',
@@ -67,6 +75,26 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     billingCycle: 'monthly',
     subscriptionStartDate: '2026-08-12T14:30:00.000Z',
     subscriptionExpiresAt: '2026-09-11T14:30:00.000Z', // 26 days remaining
+    isExpired: false,
+    paymentStatus: 'VERIFIED',
+  },
+  {
+    firstName: 'Arjun',
+    lastName: 'Mehta',
+    email: 'arjun.mehta@startup.io',
+    password: 'password123',
+    initials: 'AM',
+    displayName: 'Arjun Mehta',
+    role: 'USER',
+    plan: 'FREE',
+    joinedDate: '2026-08-16',
+    lastLogin: 'Today, 06:15 PM',
+    utrRef: '423819208311',
+    paymentStatus: 'PENDING',
+    pendingPlan: 'PRO',
+    pendingBillingCycle: 'monthly',
+    pendingAmount: 299,
+    paymentSubmittedAt: '2026-08-16T15:30:00.000Z',
     isExpired: false,
   },
   {
@@ -85,6 +113,7 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     subscriptionStartDate: '2026-08-01T09:00:00.000Z',
     subscriptionExpiresAt: '2027-08-01T09:00:00.000Z', // 1 year
     isExpired: false,
+    paymentStatus: 'VERIFIED',
   },
   {
     firstName: 'Karan',
@@ -102,6 +131,7 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     subscriptionStartDate: '2026-07-01T10:00:00.000Z',
     subscriptionExpiresAt: '2026-07-31T10:00:00.000Z',
     isExpired: true,
+    paymentStatus: 'NONE',
   },
   {
     firstName: 'Pooja',
@@ -115,6 +145,7 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     joinedDate: '2026-08-14',
     lastLogin: 'Yesterday',
     isExpired: false,
+    paymentStatus: 'NONE',
   },
   {
     firstName: 'Sneha',
@@ -128,6 +159,7 @@ const DEFAULT_REGISTERED_USERS: InvestorUser[] = [
     joinedDate: '2026-08-16',
     lastLogin: 'Today, 05:10 PM',
     isExpired: false,
+    paymentStatus: 'NONE',
   },
 ];
 
@@ -190,6 +222,7 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
     return {
       isActivePro: false,
       isExpired: false,
+      paymentStatus: 'NONE' as PaymentStatus,
       plan: 'FREE' as UserPlan,
       daysLeft: 0,
       formattedExpiryDate: 'N/A',
@@ -201,10 +234,38 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
     return {
       isActivePro: true,
       isExpired: false,
+      paymentStatus: 'VERIFIED' as PaymentStatus,
       plan: 'PRO' as UserPlan,
       daysLeft: 9999,
       formattedExpiryDate: 'Lifetime Access',
       statusText: 'Master Admin Access',
+    };
+  }
+
+  // Pending Verification Status
+  if (user.paymentStatus === 'PENDING') {
+    return {
+      isActivePro: false,
+      isExpired: false,
+      paymentStatus: 'PENDING' as PaymentStatus,
+      plan: 'FREE' as UserPlan,
+      pendingPlan: user.pendingPlan || 'PRO',
+      daysLeft: 0,
+      formattedExpiryDate: 'Pending Verification',
+      statusText: `Payment Verification Pending (${user.pendingPlan || 'PRO'} Plan)`,
+    };
+  }
+
+  // Rejected Status
+  if (user.paymentStatus === 'REJECTED') {
+    return {
+      isActivePro: false,
+      isExpired: false,
+      paymentStatus: 'REJECTED' as PaymentStatus,
+      plan: 'FREE' as UserPlan,
+      daysLeft: 0,
+      formattedExpiryDate: 'Verification Failed',
+      statusText: `Payment Verification Failed (${user.rejectionReason || 'Invalid UTR'})`,
     };
   }
 
@@ -222,6 +283,7 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
       return {
         isActivePro: false,
         isExpired: true,
+        paymentStatus: user.paymentStatus || 'NONE',
         plan: 'FREE' as UserPlan,
         daysLeft: 0,
         formattedExpiryDate: expDate,
@@ -232,6 +294,7 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
     return {
       isActivePro: false,
       isExpired: false,
+      paymentStatus: user.paymentStatus || 'NONE',
       plan: 'FREE' as UserPlan,
       daysLeft: 0,
       formattedExpiryDate: 'N/A',
@@ -256,6 +319,7 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
       return {
         isActivePro: false,
         isExpired: true,
+        paymentStatus: user.paymentStatus || 'VERIFIED',
         plan: 'FREE' as UserPlan,
         daysLeft: 0,
         formattedExpiryDate: expDate,
@@ -266,6 +330,7 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
     return {
       isActivePro: true,
       isExpired: false,
+      paymentStatus: 'VERIFIED' as PaymentStatus,
       plan: user.plan,
       daysLeft,
       formattedExpiryDate: expDate,
@@ -276,6 +341,7 @@ export function getSubscriptionInfo(user: InvestorUser | null) {
   return {
     isActivePro: true,
     isExpired: false,
+    paymentStatus: 'VERIFIED' as PaymentStatus,
     plan: user.plan,
     daysLeft: 30,
     formattedExpiryDate: '30 Days from Activation',
@@ -648,3 +714,245 @@ export function adminDeleteUser(email: string): boolean {
     return false;
   }
 }
+
+/**
+ * Submit Payment Reference (UTR) for Verification
+ * - If amount is 0 (e.g. 100% Free Coupon PRO100), unlocks immediately.
+ * - If amount > 0, marks status as 'PENDING' without giving instant Pro access.
+ */
+export async function submitPaymentRequest(params: {
+  utrRef: string;
+  plan: UserPlan;
+  billingCycle: 'monthly' | 'annual';
+  amount: number;
+  couponCode?: string;
+}): Promise<{
+  success: boolean;
+  user: InvestorUser;
+  instantUnlock: boolean;
+  message: string;
+}> {
+  const current = getStoredUser();
+  if (!current) {
+    throw new Error('User not logged in.');
+  }
+
+  const cleanUtr = params.utrRef.trim();
+  const isZeroAmount = params.amount === 0;
+  const nowIso = new Date().toISOString();
+
+  let updatedUser: InvestorUser;
+
+  if (isZeroAmount) {
+    // 100% Free Promo Pass -> Instant Activation
+    const startDate = nowIso;
+    const expiresAt = computeExpiryDate(params.billingCycle);
+
+    updatedUser = {
+      ...current,
+      plan: params.plan,
+      billingCycle: params.billingCycle,
+      subscriptionStartDate: startDate,
+      subscriptionExpiresAt: expiresAt,
+      isExpired: false,
+      paymentStatus: 'VERIFIED',
+      utrRef: cleanUtr || `FREE-COUPON-${Date.now().toString().slice(-6)}`,
+      pendingPlan: undefined,
+      pendingAmount: 0,
+      rejectionReason: undefined,
+    };
+  } else {
+    // Paid Subscription -> Set to PENDING VERIFICATION, Keep plan as FREE (or existing)
+    updatedUser = {
+      ...current,
+      paymentStatus: 'PENDING',
+      pendingPlan: params.plan,
+      pendingBillingCycle: params.billingCycle,
+      pendingAmount: params.amount,
+      paymentSubmittedAt: nowIso,
+      utrRef: cleanUtr,
+      rejectionReason: undefined,
+    };
+  }
+
+  // Persist user session
+  saveUserProfile(updatedUser);
+
+  // Update Users DB in localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const users = getRegisteredUsersRaw();
+      const updatedList = users.map((u) =>
+        u.email.toLowerCase() === current.email.toLowerCase()
+          ? {
+              ...u,
+              ...updatedUser,
+            }
+          : u
+      );
+      window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(updatedList));
+    } catch {
+      // ignore
+    }
+  }
+
+  // Sync to backend API
+  try {
+    await fetch(`${API_BASE}/billing/verify-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_id: `ORD-${Date.now().toString().slice(-6)}`,
+        payment_method: 'UPI',
+        transaction_ref: cleanUtr,
+        email: current.email,
+        plan: params.plan,
+        billing_cycle: params.billingCycle,
+        amount: params.amount,
+        is_free_coupon: isZeroAmount,
+      }),
+    });
+  } catch (err) {
+    console.warn('Backend payment submission notice:', err);
+  }
+
+  return {
+    success: true,
+    user: updatedUser,
+    instantUnlock: isZeroAmount,
+    message: isZeroAmount
+      ? 'Pro subscription unlocked successfully with free promotional code!'
+      : 'Payment reference submitted successfully. Pro plan will be activated once verified by admin.',
+  };
+}
+
+/**
+ * Admin: Approve Pending Payment Reference & Activate Pro
+ */
+export async function adminApprovePayment(email: string, durationDays = 30): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const users = getRegisteredUsersRaw();
+      const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
+      if (!user) return false;
+
+      const targetPlan = user.pendingPlan || 'PRO';
+      const targetCycle = user.pendingBillingCycle || (durationDays > 60 ? 'annual' : 'monthly');
+      const startDate = new Date().toISOString();
+      const expiresAt = computeExpiryDate(targetCycle);
+
+      const updated = users.map((u) => {
+        if (u.email.toLowerCase() === cleanEmail) {
+          return {
+            ...u,
+            plan: targetPlan,
+            billingCycle: targetCycle,
+            subscriptionStartDate: startDate,
+            subscriptionExpiresAt: expiresAt,
+            isExpired: false,
+            paymentStatus: 'VERIFIED' as PaymentStatus,
+            pendingPlan: undefined,
+            pendingAmount: undefined,
+            rejectionReason: undefined,
+          };
+        }
+        return u;
+      });
+
+      window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(updated));
+
+      // Update current logged-in user if matching
+      const current = getStoredUser();
+      if (current && current.email.toLowerCase() === cleanEmail) {
+        saveUserProfile({
+          ...current,
+          plan: targetPlan,
+          billingCycle: targetCycle,
+          subscriptionStartDate: startDate,
+          subscriptionExpiresAt: expiresAt,
+          isExpired: false,
+          paymentStatus: 'VERIFIED',
+          pendingPlan: undefined,
+          pendingAmount: undefined,
+          rejectionReason: undefined,
+        });
+      }
+
+      // Sync backend
+      fetch(`${API_BASE}/billing/approve-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, decision: 'APPROVE', durationDays }),
+      }).catch(() => {});
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Admin: Reject Pending Payment Reference
+ */
+export async function adminRejectPayment(
+  email: string,
+  reason = 'Payment not received in bank account / Invalid UTR'
+): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const users = getRegisteredUsersRaw();
+
+      const updated = users.map((u) => {
+        if (u.email.toLowerCase() === cleanEmail) {
+          return {
+            ...u,
+            plan: 'FREE' as UserPlan,
+            paymentStatus: 'REJECTED' as PaymentStatus,
+            rejectionReason: reason,
+            pendingPlan: undefined,
+            pendingAmount: undefined,
+          };
+        }
+        return u;
+      });
+
+      window.localStorage.setItem(USERS_DB_KEY, JSON.stringify(updated));
+
+      const current = getStoredUser();
+      if (current && current.email.toLowerCase() === cleanEmail) {
+        saveUserProfile({
+          ...current,
+          plan: 'FREE',
+          paymentStatus: 'REJECTED',
+          rejectionReason: reason,
+          pendingPlan: undefined,
+          pendingAmount: undefined,
+        });
+      }
+
+      fetch(`${API_BASE}/billing/approve-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, decision: 'REJECT', reason }),
+      }).catch(() => {});
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Get all users with pending payment verification
+ */
+export function getPendingPayments(): InvestorUser[] {
+  const users = getRegisteredUsers();
+  return users.filter((u) => u.paymentStatus === 'PENDING');
+}
+
