@@ -140,10 +140,13 @@ export function AiChatModal() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 px-5 py-3.5 font-bold text-slate-950 shadow-xl shadow-cyan-500/25 transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/40"
+          className="fixed bottom-4 right-3.5 sm:bottom-6 sm:right-6 z-50 flex items-center gap-1.5 sm:gap-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 px-3.5 py-2.5 sm:px-5 sm:py-3.5 font-bold text-slate-950 shadow-xl shadow-cyan-500/25 transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/40"
         >
-          <Sparkles className="h-5 w-5 animate-spin" style={{ animationDuration: '4s' }} />
-          <span className="text-sm font-extrabold tracking-tight">AI Investment Copilot</span>
+          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" style={{ animationDuration: '4s' }} />
+          <span className="text-xs sm:text-sm font-extrabold tracking-tight">
+            <span className="sm:hidden">AI Copilot</span>
+            <span className="hidden sm:inline">AI Investment Copilot</span>
+          </span>
           <span className="flex h-2 w-2 rounded-full bg-emerald-950 animate-ping" />
         </button>
       )}

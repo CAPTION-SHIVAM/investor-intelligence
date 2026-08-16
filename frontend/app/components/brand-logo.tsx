@@ -12,24 +12,24 @@ export function BrandLogo({
   href?: string;
 }) {
   const iconSizes = {
-    sm: 'h-8 w-8 text-xs',
-    md: 'h-10 w-10 text-sm',
-    lg: 'h-13 w-13 text-base',
+    sm: 'h-7 w-7 sm:h-8 sm:w-8 text-xs',
+    md: 'h-8 w-8 sm:h-10 sm:w-10 text-sm',
+    lg: 'h-10 w-10 sm:h-12 sm:w-12 text-base',
   };
 
   const titleSizes = {
-    sm: 'text-base',
-    md: 'text-lg',
-    lg: 'text-2xl',
+    sm: 'text-sm sm:text-base',
+    md: 'text-sm sm:text-lg',
+    lg: 'text-lg sm:text-2xl',
   };
 
   return (
-    <Link href={href} className="group flex items-center gap-3 transition">
+    <Link href={href} className="group flex items-center gap-2 sm:gap-3 transition shrink-0">
       {/* Glowing Diamond Crest Icon */}
-      <div className="relative">
-        <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-400 opacity-40 blur-sm transition group-hover:opacity-75" />
+      <div className="relative shrink-0">
+        <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-400 opacity-40 blur-sm transition group-hover:opacity-75" />
         <div
-          className={`relative flex ${iconSizes[size]} items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-[#071124] to-slate-950 border border-cyan-500/40 p-1.5 shadow-xl shadow-cyan-500/15`}
+          className={`relative flex ${iconSizes[size]} items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-900 via-[#071124] to-slate-950 border border-cyan-500/40 p-1 shadow-xl shadow-cyan-500/15`}
         >
           {/* Custom Geometric Monogram SVG */}
           <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
@@ -67,16 +67,16 @@ export function BrandLogo({
 
       {/* Brand Typography */}
       <div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <span className={`font-heading ${titleSizes[size]} font-black tracking-tight text-white`}>
             Investor<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">Intelligence</span>
           </span>
-          <span className="rounded bg-cyan-500/15 px-1.5 py-0.2 text-[9px] font-black tracking-wider text-cyan-300 border border-cyan-500/30 uppercase">
+          <span className="rounded bg-cyan-500/15 px-1 py-0.2 text-[8px] sm:text-[9px] font-black tracking-wider text-cyan-300 border border-cyan-500/30 uppercase">
             PRO
           </span>
         </div>
         {showSubtitle && (
-          <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+          <p className="hidden sm:block text-[10px] font-bold tracking-wider text-slate-400 uppercase">
             6-Pillar IPO Reality &amp; Stock Screener
           </p>
         )}

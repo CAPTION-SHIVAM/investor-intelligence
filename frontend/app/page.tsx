@@ -401,35 +401,35 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-12 pb-16 md:pt-18 md:pb-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-8 pb-12 sm:pt-14 sm:pb-20 md:pt-18 md:pb-24 overflow-hidden">
+        <div className="mx-auto max-w-7xl px-3.5 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-bold text-cyan-300 shadow-sm backdrop-blur">
-              <Gift size={14} className="text-amber-400 animate-bounce" />
-              <span>The Investor Intelligence Gift Score Engine · Real DRHP Forensics</span>
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold text-cyan-300 shadow-sm backdrop-blur">
+              <Gift size={13} className="text-amber-400 animate-bounce" />
+              <span>Gift Score Engine · Real DRHP Forensics</span>
             </div>
 
-            <h1 className="mt-6 font-heading text-4xl font-extrabold tracking-tight text-white sm:text-6xl md:text-7xl leading-[1.1]">
+            <h1 className="mt-4 sm:mt-6 font-heading text-2xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
               Know Exactly <span className="gradient-text-cyan">Why an IPO is Good</span> &amp; What Retail Misses.
             </h1>
 
-            <p className="mt-6 text-lg text-slate-300 sm:text-xl leading-relaxed max-w-2xl mx-auto">
+            <p className="mt-3 sm:mt-6 text-xs sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto px-2">
               Get the definitive <strong>Gift Point verdict</strong>, competitive moats, key disadvantages, and hidden DRHP forensics before you apply.
             </p>
 
             {/* Quick Hero Search Bar */}
-            <form onSubmit={handleHeroSearchSubmit} className="mt-8 max-w-xl mx-auto">
+            <form onSubmit={handleHeroSearchSubmit} className="mt-6 sm:mt-8 max-w-xl mx-auto px-1 sm:px-2">
               <div className="relative flex items-center">
                 <input
                   value={heroSearch}
                   onChange={(e) => setHeroSearch(e.target.value)}
-                  placeholder="Search any IPO or stock (e.g. Swiggy, Hyundai, Ather, Bajaj)..."
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/90 py-3.5 pl-12 pr-28 text-sm text-white placeholder:text-slate-500 shadow-2xl focus:border-cyan-400 focus:outline-none"
+                  placeholder="Search IPO (e.g. Swiggy, Hyundai, Ather)..."
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/90 py-3 pl-9 pr-24 sm:py-3.5 sm:pl-12 sm:pr-28 text-xs sm:text-sm text-white placeholder:text-slate-500 shadow-2xl focus:border-cyan-400 focus:outline-none"
                 />
-                <Search size={18} className="absolute left-4 text-slate-400" />
+                <Search size={16} className="absolute left-3 sm:left-4 text-slate-400" />
                 <button
                   type="submit"
-                  className="absolute right-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-xs font-extrabold text-slate-950 hover:scale-105 transition"
+                  className="absolute right-1.5 sm:right-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-extrabold text-slate-950 hover:scale-105 transition"
                 >
                   Analyze →
                 </button>
@@ -437,54 +437,55 @@ export default function HomePage() {
             </form>
 
             {/* Prominent Non-SEBI Disclaimer Badge */}
-            <div className="mt-6 mx-auto max-w-2xl rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-slate-300 flex items-center justify-center gap-2.5">
-              <AlertTriangle size={16} className="text-amber-400 shrink-0" />
-              <p className="text-[11px] text-slate-300 text-left sm:text-center">
-                <strong className="text-amber-300">Notice:</strong> We are <strong>NOT a SEBI registered advisor</strong>. All data is for educational research only. <strong>Please take independent investment decisions from your own end</strong> or consult your certified advisor.
+            <div className="mt-4 sm:mt-6 mx-auto max-w-2xl rounded-2xl border border-amber-500/30 bg-amber-500/10 p-2.5 sm:p-3 text-xs text-slate-300 flex items-center justify-center gap-2 sm:gap-2.5">
+              <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+              <p className="text-[10px] sm:text-[11px] text-slate-300 text-left sm:text-center leading-tight sm:leading-normal">
+                <strong className="text-amber-300">Notice:</strong> Not SEBI registered advisors. Educational research only. <strong>Take decisions from your own end (DYOR)</strong>.
               </p>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+            {/* Hero Action Buttons - Fully Responsive Stacking */}
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3.5">
               <Link
                 href="/ipos"
-                className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 px-7 py-3.5 text-sm sm:text-base font-extrabold text-slate-950 shadow-xl shadow-cyan-500/30 transition hover:scale-105"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 px-5 py-3 sm:px-7 sm:py-3.5 text-xs sm:text-sm md:text-base font-extrabold text-slate-950 shadow-xl shadow-cyan-500/30 transition hover:scale-105"
               >
                 <span>1. IPO Forensics &amp; Verdicts</span>
-                <ArrowRight size={17} />
+                <ArrowRight size={15} />
               </Link>
               <Link
                 href="/journal"
-                className="flex items-center gap-2 rounded-2xl border border-cyan-500/40 bg-cyan-950/40 px-7 py-3.5 text-sm sm:text-base font-extrabold text-cyan-300 shadow-xl shadow-cyan-500/15 transition hover:bg-cyan-500 hover:text-slate-950"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/40 bg-cyan-950/40 px-5 py-3 sm:px-7 sm:py-3.5 text-xs sm:text-sm md:text-base font-extrabold text-cyan-300 shadow-xl shadow-cyan-500/15 transition hover:bg-cyan-500 hover:text-slate-950"
               >
-                <BookOpen size={18} />
+                <BookOpen size={16} />
                 <span>2. Trading Journal (NEW)</span>
               </Link>
               <a
                 href="#calculator"
-                className="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/90 px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-md transition hover:bg-slate-800"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/90 px-4 py-3 sm:px-6 sm:py-3.5 text-xs sm:text-sm md:text-base font-bold text-white shadow-md transition hover:bg-slate-800"
               >
-                <Calculator size={17} className="text-cyan-400" />
+                <Calculator size={15} className="text-cyan-400" />
                 <span>Profit Calculator</span>
               </a>
             </div>
 
             {/* Real Market Trust metrics */}
-            <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4 max-w-3xl mx-auto border-t border-slate-800/80 pt-8">
-              <div>
-                <p className="font-heading text-3xl font-black text-white">87.5%</p>
-                <p className="text-xs text-slate-400 mt-1">Positive Listing Win Rate</p>
+            <div className="mt-8 sm:mt-12 grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-4 max-w-3xl mx-auto border-t border-slate-800/80 pt-6 sm:pt-8">
+              <div className="p-2 sm:p-0">
+                <p className="font-heading text-xl sm:text-3xl font-black text-white">87.5%</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Listing Win Rate</p>
               </div>
-              <div>
-                <p className="font-heading text-3xl font-black text-cyan-400">₹65,000Cr+</p>
-                <p className="text-xs text-slate-400 mt-1">Real DRHP Capital Audited</p>
+              <div className="p-2 sm:p-0">
+                <p className="font-heading text-xl sm:text-3xl font-black text-cyan-400">₹65,000Cr+</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">DRHP Audited</p>
               </div>
-              <div>
-                <p className="font-heading text-3xl font-black text-emerald-400">6-Pillar</p>
-                <p className="text-xs text-slate-400 mt-1">Deterministic Reality Score</p>
+              <div className="p-2 sm:p-0">
+                <p className="font-heading text-xl sm:text-3xl font-black text-emerald-400">6-Pillar</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Reality Scoring</p>
               </div>
-              <div>
-                <p className="font-heading text-3xl font-black text-purple-400">Instant UPI</p>
-                <p className="text-xs text-slate-400 mt-1">Pro Upgrades &amp; Tax Invoices</p>
+              <div className="p-2 sm:p-0">
+                <p className="font-heading text-xl sm:text-3xl font-black text-purple-400">Instant UPI</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">QR Upgrades</p>
               </div>
             </div>
           </div>
